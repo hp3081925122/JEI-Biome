@@ -257,7 +257,7 @@ public final class BiomeBlockIndexExporter {
         FeatureConfiguration config = configuredFeature.config();
         if (config instanceof OreConfiguration oreConfiguration) {
             for (OreConfiguration.TargetBlockState targetState : oreConfiguration.targetStates) {
-                addOreOrUndergroundBlockState(targetState.state, oreBlocks, undergroundFeatureBlocks);
+                addBlockState(targetState.state, oreBlocks);
                 addOreDistributionLine(targetState.state, sourcePlacedFeature, placedFeatureId, oreConfiguration.size, oreDistributionLines);
             }
         } else if (config instanceof ReplaceBlockConfiguration replaceBlockConfiguration) {
@@ -351,7 +351,7 @@ public final class BiomeBlockIndexExporter {
     }
 
     private static void addOreDistributionLine(BlockState state, net.minecraft.world.level.levelgen.placement.PlacedFeature placedFeature, String placedFeatureId, int veinSize, Map<String, LinkedHashMap<String, BiomeBlockIndexCache.OreDistributionLine>> oreDistributionLines) {
-        if (state == null || !state.is(Tags.Blocks.ORES) || state.is(BIOME_BLOCK_BLACKLIST)) {
+        if (state == null || state.is(BIOME_BLOCK_BLACKLIST)) {
             return;
         }
         ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
