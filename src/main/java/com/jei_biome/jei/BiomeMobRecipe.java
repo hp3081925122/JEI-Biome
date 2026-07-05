@@ -8,6 +8,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public final class BiomeMobRecipe {
             EntityType<?> entityType = entityId == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(entityId);
             ItemStack stack = ItemStack.EMPTY;
             if (entityType != null) {
-                SpawnEggItem eggItem = SpawnEggItem.byId(entityType);
+                SpawnEggItem eggItem = ForgeSpawnEggItem.fromEntityType(entityType);
                 if (eggItem != null && eggItem != Items.AIR) {
                     stack = new ItemStack(eggItem);
                 }

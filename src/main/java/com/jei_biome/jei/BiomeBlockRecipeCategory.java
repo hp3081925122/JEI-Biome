@@ -20,6 +20,7 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -40,8 +41,10 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     private static final int SLOT_SIZE = 18;
     private static final int GRID_COLUMNS = 8;
     private static final int SECTION_TITLE_HEIGHT = 12;
+    private static final int TITLE_LINE_HEIGHT = 10;
     private static final int SECTION_GAP = 8;
     private static final int CONTENT_PADDING_BOTTOM = 6;
+    private static final int TEXT_WIDTH = CONTENT_WIDTH - SCROLLBAR_WIDTH - 8;
     private final IDrawable icon;
 
     public BiomeBlockRecipeCategory(IGuiHelper guiHelper) {
@@ -139,21 +142,23 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     static List<SlotPlacement> getSlotPlacements(BiomeBlockRecipe recipe) {
+        Font font = Minecraft.getInstance().font;
         List<SlotPlacement> placements = new ArrayList<>();
         int currentY = 4;
-        currentY = addSlotPlacements(placements, recipe.terrainStacks(), currentY);
-        currentY = addSlotPlacements(placements, recipe.surfaceFeatureStacks(), currentY);
-        currentY = addSlotPlacements(placements, recipe.undergroundFeatureStacks(), currentY);
-        addSlotPlacements(placements, recipe.oreStacks(), currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks(), font, currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks(), font, currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks(), font, currentY);
+        addSlotPlacements(placements, Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks(), font, currentY);
         return placements;
     }
 
     static int getTotalContentHeight(BiomeBlockRecipe recipe) {
+        Font font = Minecraft.getInstance().font;
         int height = 4;
-        height += getSectionHeight(recipe.terrainStacks().size());
-        height += getSectionHeight(recipe.surfaceFeatureStacks().size());
-        height += getSectionHeight(recipe.undergroundFeatureStacks().size());
-        height += getSectionHeight(recipe.oreStacks().size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks().size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks().size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks().size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks().size());
         return height + CONTENT_PADDING_BOTTOM;
     }
 
@@ -166,11 +171,15 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     private static int drawSection(int count, Component title, List<ItemStack> stacks, GuiGraphics guiGraphics, Font font, int x, int y) {
-        guiGraphics.drawString(font, title, x + 4, y, 0xFF555555, false);
-        if (count <= 0) {
-            guiGraphics.drawString(font, Component.translatable("jei_biome.label.empty"), x + 8, y + SECTION_TITLE_HEIGHT, 0xFF888888, false);
+        List<FormattedCharSequence> titleLines = font.split(title, TEXT_WIDTH);
+        for (int index = 0; index < titleLines.size(); index++) {
+            guiGraphics.drawString(font, titleLines.get(index), x + 4, y + index * TITLE_LINE_HEIGHT, 0xFF555555, false);
         }
-        return y + getSectionHeight(stacks.size());
+        int titleHeight = getTitleHeight(font, title);
+        if (count <= 0) {
+            guiGraphics.drawString(font, Component.translatable("jei_biome.label.empty"), x + 8, y + titleHeight, 0xFF888888, false);
+        }
+        return y + getSectionHeight(font, title, stacks.size());
     }
 
     private static void addOreDistributionTooltip(ITooltipBuilder tooltip, BiomeBlockIndexCache.OreDistributionLine line) {
@@ -192,19 +201,24 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         tooltip.add(Component.translatable("jei_biome.tooltip.ore_height." + heightMode).withStyle(ChatFormatting.GREEN));
     }
 
-    private static int addSlotPlacements(List<SlotPlacement> placements, List<ItemStack> stacks, int currentY) {
-        int slotStartY = currentY + SECTION_TITLE_HEIGHT;
+    private static int addSlotPlacements(List<SlotPlacement> placements, Component title, List<ItemStack> stacks, Font font, int currentY) {
+        int slotStartY = currentY + getTitleHeight(font, title);
         for (int index = 0; index < stacks.size(); index++) {
             int column = index % GRID_COLUMNS;
             int row = index / GRID_COLUMNS;
             placements.add(new SlotPlacement(4 + column * SLOT_SIZE, slotStartY + row * SLOT_SIZE));
         }
-        return currentY + getSectionHeight(stacks.size());
+        return currentY + getSectionHeight(font, title, stacks.size());
     }
 
-    private static int getSectionHeight(int stackCount) {
+    private static int getSectionHeight(Font font, Component title, int stackCount) {
         int rows = Math.max(1, (stackCount + GRID_COLUMNS - 1) / GRID_COLUMNS);
-        return SECTION_TITLE_HEIGHT + rows * SLOT_SIZE + SECTION_GAP;
+        return getTitleHeight(font, title) + rows * SLOT_SIZE + SECTION_GAP;
+    }
+
+    private static int getTitleHeight(Font font, Component title) {
+        int lineCount = Math.max(1, font.split(title, TEXT_WIDTH).size());
+        return Math.max(SECTION_TITLE_HEIGHT, lineCount * TITLE_LINE_HEIGHT + 2);
     }
 
     private static void drawPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {

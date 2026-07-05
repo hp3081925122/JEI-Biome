@@ -20,6 +20,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -42,8 +43,10 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     private static final int SLOT_SIZE = 18;
     private static final int GRID_COLUMNS = 8;
     private static final int SECTION_TITLE_HEIGHT = 12;
+    private static final int TITLE_LINE_HEIGHT = 10;
     private static final int SECTION_GAP = 8;
     private static final int CONTENT_PADDING_BOTTOM = 6;
+    private static final int TEXT_WIDTH = CONTENT_WIDTH - SCROLLBAR_WIDTH - 8;
     private final IDrawable icon;
 
     public BiomeMobRecipeCategory(IGuiHelper guiHelper) {
@@ -83,13 +86,11 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, BiomeMobRecipe recipe, IFocusGroup focuses) {
         ItemStack focusedDropStack = getFocusedDropStack(recipe, focuses);
-        for (BiomeMobRecipe.MobDisplayEntry entry : getDropSourceEntries(recipe, focusedDropStack)) {
-            if (!entry.stack().isEmpty()) {
-                builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
-                        .setStandardSlotBackground()
-                        .addItemStack(entry.stack())
-                        .addRichTooltipCallback((recipeSlotView, tooltip) -> addMobEntryTooltip(tooltip, entry));
-            }
+        for (BiomeMobRecipe.MobDisplayEntry entry : getVisibleDropSourceEntries(recipe, focusedDropStack)) {
+            builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
+                    .setStandardSlotBackground()
+                    .addItemStack(entry.stack())
+                    .addRichTooltipCallback((recipeSlotView, tooltip) -> addMobEntryTooltip(tooltip, entry));
         }
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
             if (!entry.stack().isEmpty()) {
@@ -123,11 +124,12 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     static void drawScrollableContents(BiomeMobRecipe recipe, ItemStack focusedDropStack, GuiGraphics guiGraphics, int x, int y) {
         Font font = Minecraft.getInstance().font;
         int currentY = y + 4;
-        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getDropSourceEntries(recipe, focusedDropStack);
+        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getVisibleDropSourceEntries(recipe, focusedDropStack);
         if (!dropSourceEntries.isEmpty()) {
-            Component focusedName = focusedDropStack.getHoverName().copy().withStyle(ChatFormatting.BLUE);
-            guiGraphics.drawString(font, Component.translatable("jei_biome.label.mob_drop_sources", focusedName), x + 4, currentY, 0xFF555555, false);
-            currentY += SECTION_TITLE_HEIGHT + SLOT_SIZE + SECTION_GAP;
+            Component title = getDropSourceTitle(focusedDropStack);
+            currentY += drawWrappedText(guiGraphics, font, title, x + 4, currentY, 0xFF555555);
+            int rows = Math.max(1, (dropSourceEntries.size() + GRID_COLUMNS - 1) / GRID_COLUMNS);
+            currentY += rows * SLOT_SIZE + SECTION_GAP;
         }
         String currentCategory = "";
         if (recipe.mobEntries().isEmpty()) {
@@ -137,8 +139,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
             if (!entry.data().category.equals(currentCategory)) {
                 currentCategory = entry.data().category;
-                guiGraphics.drawString(font, Component.translatable("jei_biome.mob_category." + currentCategory), x + 4, currentY, 0xFF555555, false);
-                currentY += SECTION_TITLE_HEIGHT;
+                currentY += drawWrappedText(guiGraphics, font, getTranslatedValue("jei_biome.mob_category." + currentCategory, currentCategory), x + 4, currentY, 0xFF555555);
             }
             if (isLastEntryInCategory(recipe, entry)) {
                 currentY += getCategoryGridHeight(recipe, currentCategory) + SECTION_GAP;
@@ -147,11 +148,12 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     static List<SlotPlacement> getSlotPlacements(BiomeMobRecipe recipe, ItemStack focusedDropStack) {
+        Font font = Minecraft.getInstance().font;
         List<SlotPlacement> placements = new ArrayList<>();
         int currentY = 4;
-        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getDropSourceEntries(recipe, focusedDropStack);
+        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getVisibleDropSourceEntries(recipe, focusedDropStack);
         if (!dropSourceEntries.isEmpty()) {
-            currentY += SECTION_TITLE_HEIGHT;
+            currentY += getTitleHeight(font, getDropSourceTitle(focusedDropStack));
             for (int index = 0; index < dropSourceEntries.size(); index++) {
                 int column = index % GRID_COLUMNS;
                 int row = index / GRID_COLUMNS;
@@ -165,7 +167,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
             if (!entry.data().category.equals(currentCategory)) {
                 currentCategory = entry.data().category;
-                currentY += SECTION_TITLE_HEIGHT;
+                currentY += getTitleHeight(font, getTranslatedValue("jei_biome.mob_category." + currentCategory, currentCategory));
                 categoryIndex = 0;
             }
             if (!entry.stack().isEmpty()) {
@@ -185,17 +187,18 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         if (recipe.mobEntries().isEmpty()) {
             return 24;
         }
+        Font font = Minecraft.getInstance().font;
         int height = 4;
-        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getDropSourceEntries(recipe, focusedDropStack);
+        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getVisibleDropSourceEntries(recipe, focusedDropStack);
         if (!dropSourceEntries.isEmpty()) {
             int rows = Math.max(1, (dropSourceEntries.size() + GRID_COLUMNS - 1) / GRID_COLUMNS);
-            height += SECTION_TITLE_HEIGHT + rows * SLOT_SIZE + SECTION_GAP;
+            height += getTitleHeight(font, getDropSourceTitle(focusedDropStack)) + rows * SLOT_SIZE + SECTION_GAP;
         }
         String currentCategory = "";
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
             if (!entry.data().category.equals(currentCategory)) {
                 currentCategory = entry.data().category;
-                height += SECTION_TITLE_HEIGHT;
+                height += getTitleHeight(font, getTranslatedValue("jei_biome.mob_category." + currentCategory, currentCategory));
             }
             if (isLastEntryInCategory(recipe, entry)) {
                 height += getCategoryGridHeight(recipe, currentCategory) + SECTION_GAP;
@@ -233,16 +236,18 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     private static void addMobSpawnTooltip(ITooltipBuilder tooltip, BiomeBlockIndexCache.MobSpawnEntry entry) {
-        tooltip.add(Component.translatable("jei_biome.tooltip.mob_category", Component.translatable("jei_biome.mob_category." + entry.category)).withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("jei_biome.tooltip.mob_category", getTranslatedValue("jei_biome.mob_category." + entry.category, entry.category)).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("jei_biome.tooltip.mob_weight", entry.weight).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("jei_biome.tooltip.mob_group", entry.minCount, entry.maxCount).withStyle(ChatFormatting.GRAY));
         if ((entry.placementType != null && !entry.placementType.isBlank()) || (entry.heightmapType != null && !entry.heightmapType.isBlank())) {
             tooltip.add(Component.translatable("jei_biome.tooltip.mob_spawn_conditions").withStyle(ChatFormatting.DARK_GREEN));
             if (entry.placementType != null && !entry.placementType.isBlank()) {
-                tooltip.add(Component.translatable("jei_biome.tooltip.mob_placement", Component.translatable("jei_biome.mob_placement." + entry.placementType.toLowerCase(Locale.ROOT))).withStyle(ChatFormatting.GRAY));
+                String placementType = entry.placementType.toLowerCase(Locale.ROOT);
+                tooltip.add(Component.translatable("jei_biome.tooltip.mob_placement", getTranslatedValue("jei_biome.mob_placement." + placementType, entry.placementType)).withStyle(ChatFormatting.GRAY));
             }
             if (entry.heightmapType != null && !entry.heightmapType.isBlank()) {
-                tooltip.add(Component.translatable("jei_biome.tooltip.mob_heightmap", Component.translatable("jei_biome.mob_heightmap." + entry.heightmapType.toLowerCase(Locale.ROOT))).withStyle(ChatFormatting.GRAY));
+                String heightmapType = entry.heightmapType.toLowerCase(Locale.ROOT);
+                tooltip.add(Component.translatable("jei_biome.tooltip.mob_heightmap", getTranslatedValue("jei_biome.mob_heightmap." + heightmapType, entry.heightmapType)).withStyle(ChatFormatting.GRAY));
             }
             tooltip.add(Component.translatable("jei_biome.tooltip.mob_spawn_rules_note").withStyle(ChatFormatting.DARK_GRAY));
         }
@@ -301,6 +306,63 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
             }
         }
         return List.copyOf(entries);
+    }
+
+    private static List<BiomeMobRecipe.MobDisplayEntry> getVisibleDropSourceEntries(BiomeMobRecipe recipe, ItemStack stack) {
+        List<BiomeMobRecipe.MobDisplayEntry> entries = new ArrayList<>();
+        for (BiomeMobRecipe.MobDisplayEntry entry : getDropSourceEntries(recipe, stack)) {
+            if (!entry.stack().isEmpty()) {
+                entries.add(entry);
+            }
+        }
+        return List.copyOf(entries);
+    }
+
+    private static Component getTranslatedValue(String translationKey, String fallback) {
+        if (I18n.exists(translationKey)) {
+            return Component.translatable(translationKey);
+        }
+        if (fallback != null && I18n.exists(fallback)) {
+            return Component.translatable(fallback);
+        }
+        return Component.literal(cleanFallbackText(fallback));
+    }
+
+    private static Component getDropSourceTitle(ItemStack focusedDropStack) {
+        Component focusedName = focusedDropStack.getHoverName().copy().withStyle(ChatFormatting.BLUE);
+        return Component.translatable("jei_biome.label.mob_drop_sources", focusedName);
+    }
+
+    private static int drawWrappedText(GuiGraphics guiGraphics, Font font, Component text, int x, int y, int color) {
+        List<FormattedCharSequence> lines = font.split(text, TEXT_WIDTH);
+        for (int index = 0; index < lines.size(); index++) {
+            guiGraphics.drawString(font, lines.get(index), x, y + index * TITLE_LINE_HEIGHT, color, false);
+        }
+        return getTitleHeight(font, text);
+    }
+
+    private static int getTitleHeight(Font font, Component text) {
+        int lineCount = Math.max(1, font.split(text, TEXT_WIDTH).size());
+        return Math.max(SECTION_TITLE_HEIGHT, lineCount * TITLE_LINE_HEIGHT + 2);
+    }
+
+    private static String cleanFallbackText(String fallback) {
+        if (fallback == null || fallback.isBlank()) {
+            return "";
+        }
+        String value = fallback;
+        if (value.startsWith("category.")) {
+            value = value.substring("category.".length());
+        }
+        int colonIndex = value.indexOf(':');
+        if (colonIndex >= 0 && colonIndex < value.length() - 1) {
+            value = value.substring(colonIndex + 1);
+        }
+        int dotIndex = value.lastIndexOf('.');
+        if (dotIndex >= 0 && dotIndex < value.length() - 1) {
+            value = value.substring(dotIndex + 1);
+        }
+        return value.replace('_', ' ');
     }
 
     private static void drawPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
