@@ -25,11 +25,12 @@ public final class BiomeExportCommands {
     private static int export(CommandContext<CommandSourceStack> context) {
         try {
             Path path = BiomeBlockIndexExporter.export(context.getSource().getServer());
-            context.getSource().sendSuccess(() -> Component.translatable("jei_biome.command.export.success", path), true);
+            context.getSource().sendSuccess(() -> Component.translatable("jei_biome.command.export.success", path.toString()), true);
             return 1;
         } catch (Exception exception) {
             Jei_biome.LOGGER.error("JEI Biome export failed", exception);
-            context.getSource().sendFailure(Component.translatable("jei_biome.command.export.failure", exception.getClass().getSimpleName() + ": " + exception.getMessage()));
+            String message = exception.getMessage();
+            context.getSource().sendFailure(Component.translatable("jei_biome.command.export.failure", exception.getClass().getSimpleName() + (message == null ? "" : ": " + message)));
             return 0;
         }
     }

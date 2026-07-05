@@ -8,7 +8,7 @@ import java.util.List;
 
 public final class BiomeBlockIndexCache {
 
-    public static final int CURRENT_VERSION = 9;
+    public static final int CURRENT_VERSION = 10;
     public static final Gson GSON = new GsonBuilder()
             .disableHtmlEscaping()
             .setPrettyPrinting()

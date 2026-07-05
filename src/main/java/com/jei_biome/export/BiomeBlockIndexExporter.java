@@ -189,7 +189,7 @@ public final class BiomeBlockIndexExporter {
             return List.of();
         }
         ResourceLocation lootLocation = lootTableId.location();
-        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_tables/" + lootLocation.getPath() + ".json");
+        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_table/" + lootLocation.getPath() + ".json");
         return server.getResourceManager().getResource(resourceId)
                 .map(resource -> {
                     LinkedHashSet<String> itemIds = new LinkedHashSet<>();
