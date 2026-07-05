@@ -135,7 +135,7 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
     }
 
     @Override
-    public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollDeltaY) {
+    public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollDeltaX, double scrollDeltaY) {
         if (getHiddenAmount() > 0) {
             float scrollAmount = (float) (scrollDeltaY * 18.0D / Math.max(contentHeight, 1));
             scrollOffsetY = Mth.clamp(scrollOffsetY - scrollAmount, 0.0F, 1.0F);

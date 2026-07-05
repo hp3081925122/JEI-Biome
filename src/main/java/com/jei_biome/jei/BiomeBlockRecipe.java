@@ -2,13 +2,13 @@ package com.jei_biome.jei;
 
 import com.jei_biome.Jei_biome;
 import com.jei_biome.data.BiomeBlockIndexCache;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -81,7 +81,7 @@ public final class BiomeBlockRecipe {
         if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) {
             return List.of();
         }
-        ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(blockItem.getBlock());
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(blockItem.getBlock());
         if (blockId == null) {
             return List.of();
         }
@@ -99,7 +99,7 @@ public final class BiomeBlockRecipe {
         List<ItemStack> stacks = new ArrayList<>();
         for (String rawId : blockIds) {
             ResourceLocation id = ResourceLocation.tryParse(rawId);
-            Block block = id == null ? null : ForgeRegistries.BLOCKS.getValue(id);
+            Block block = id == null ? null : BuiltInRegistries.BLOCK.get(id);
             Item item = block == null ? Items.AIR : block.asItem();
             if (item != Items.AIR) {
                 stacks.add(new ItemStack(item));
@@ -107,7 +107,7 @@ public final class BiomeBlockRecipe {
         }
         stacks.sort(Comparator
                 .comparing((ItemStack stack) -> stack.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(stack -> String.valueOf(ForgeRegistries.ITEMS.getKey(stack.getItem())), String.CASE_INSENSITIVE_ORDER));
+                .thenComparing(stack -> String.valueOf(BuiltInRegistries.ITEM.getKey(stack.getItem())), String.CASE_INSENSITIVE_ORDER));
         return List.copyOf(stacks);
     }
 

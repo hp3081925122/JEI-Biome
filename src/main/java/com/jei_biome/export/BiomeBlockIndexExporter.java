@@ -10,14 +10,18 @@ import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.SpawnPlacementType;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.block.Block;
@@ -47,8 +51,8 @@ import net.minecraft.world.level.levelgen.feature.configurations.TreeConfigurati
 import net.minecraft.world.level.levelgen.feature.configurations.VegetationPatchConfiguration;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.neoforged.neoforge.common.Tags;
 
 import java.io.BufferedReader;
 import java.io.Writer;
@@ -149,7 +153,7 @@ public final class BiomeBlockIndexExporter {
         MobSpawnSettings mobSettings = biome.getMobSettings();
         for (MobCategory category : mobSettings.getSpawnerTypes()) {
             for (MobSpawnSettings.SpawnerData spawnerData : mobSettings.getMobs(category).unwrap()) {
-                ResourceLocation entityId = ForgeRegistries.ENTITY_TYPES.getKey(spawnerData.type);
+                ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(spawnerData.type);
                 if (entityId == null) {
                     continue;
                 }
@@ -159,19 +163,33 @@ public final class BiomeBlockIndexExporter {
                 entry.weight = spawnerData.getWeight().asInt();
                 entry.minCount = spawnerData.minCount;
                 entry.maxCount = spawnerData.maxCount;
-                entry.placementType = SpawnPlacements.getPlacementType(spawnerData.type).name().toLowerCase(java.util.Locale.ROOT);
+                entry.placementType = summarizeSpawnPlacementType(SpawnPlacements.getPlacementType(spawnerData.type));
                 entry.heightmapType = SpawnPlacements.getHeightmapType(spawnerData.type).getSerializedName();
+                entry.hasPlacement = SpawnPlacements.hasPlacement(spawnerData.type);
+                MobSpawnSettings.MobSpawnCost spawnCost = mobSettings.getMobSpawnCost(spawnerData.type);
+                if (spawnCost != null) {
+                    entry.spawnCharge = formatDouble(spawnCost.charge());
+                    entry.spawnEnergyBudget = formatDouble(spawnCost.energyBudget());
+                }
                 entry.dropItems = collectEntityDropItems(server, spawnerData.type.getDefaultLootTable());
                 target.add(entry);
             }
         }
     }
 
-    private static List<String> collectEntityDropItems(MinecraftServer server, ResourceLocation lootTableId) {
-        if (lootTableId == null || "minecraft:empty".equals(lootTableId.toString())) {
+    private static String formatDouble(double value) {
+        if (value == Math.rint(value)) {
+            return Long.toString(Math.round(value));
+        }
+        return Double.toString(value);
+    }
+
+    private static List<String> collectEntityDropItems(MinecraftServer server, ResourceKey<LootTable> lootTableId) {
+        if (lootTableId == null || "minecraft:empty".equals(lootTableId.location().toString())) {
             return List.of();
         }
-        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootTableId.getNamespace(), "loot_tables/" + lootTableId.getPath() + ".json");
+        ResourceLocation lootLocation = lootTableId.location();
+        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_tables/" + lootLocation.getPath() + ".json");
         return server.getResourceManager().getResource(resourceId)
                 .map(resource -> {
                     LinkedHashSet<String> itemIds = new LinkedHashSet<>();
@@ -183,6 +201,22 @@ public final class BiomeBlockIndexExporter {
                     return sortedList(itemIds);
                 })
                 .orElse(List.of());
+    }
+
+    private static String summarizeSpawnPlacementType(SpawnPlacementType placementType) {
+        if (placementType == SpawnPlacementTypes.ON_GROUND) {
+            return "on_ground";
+        }
+        if (placementType == SpawnPlacementTypes.IN_WATER) {
+            return "in_water";
+        }
+        if (placementType == SpawnPlacementTypes.IN_LAVA) {
+            return "in_lava";
+        }
+        if (placementType == SpawnPlacementTypes.NO_RESTRICTIONS) {
+            return "no_restrictions";
+        }
+        return "custom";
     }
 
     private static void collectItemEntries(JsonElement element, Set<String> itemIds) {
@@ -202,7 +236,7 @@ public final class BiomeBlockIndexExporter {
         JsonObject object = element.getAsJsonObject();
         if (object.has("type") && "minecraft:item".equals(object.get("type").getAsString()) && object.has("name")) {
             ResourceLocation itemId = ResourceLocation.tryParse(object.get("name").getAsString());
-            Item item = itemId == null ? null : ForgeRegistries.ITEMS.getValue(itemId);
+            Item item = itemId == null ? null : BuiltInRegistries.ITEM.get(itemId);
             if (item != null) {
                 itemIds.add(itemId.toString());
             }
@@ -354,7 +388,7 @@ public final class BiomeBlockIndexExporter {
         if (state == null || state.is(BIOME_BLOCK_BLACKLIST)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         if (id == null) {
             return;
         }
@@ -487,7 +521,7 @@ public final class BiomeBlockIndexExporter {
         if (block == null || block == Blocks.AIR || block == Blocks.CAVE_AIR || block == Blocks.VOID_AIR || block.defaultBlockState().is(BIOME_BLOCK_BLACKLIST)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         if (id != null) {
             target.add(id.toString());
         }

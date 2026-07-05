@@ -8,7 +8,7 @@ import java.util.List;
 
 public final class BiomeBlockIndexCache {
 
-    public static final int CURRENT_VERSION = 8;
+    public static final int CURRENT_VERSION = 9;
     public static final Gson GSON = new GsonBuilder()
             .disableHtmlEscaping()
             .setPrettyPrinting()
@@ -41,6 +41,9 @@ public final class BiomeBlockIndexCache {
         public int maxCount;
         public String placementType = "";
         public String heightmapType = "";
+        public boolean hasPlacement;
+        public String spawnCharge = "";
+        public String spawnEnergyBudget = "";
         public List<String> dropItems = new ArrayList<>();
     }
 

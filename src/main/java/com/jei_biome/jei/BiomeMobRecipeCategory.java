@@ -18,11 +18,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -137,7 +137,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
             if (!entry.data().category.equals(currentCategory)) {
                 currentCategory = entry.data().category;
-                guiGraphics.drawString(font, Component.translatable("jei_biome.mob_category." + currentCategory), x + 4, currentY, 0xFF555555, false);
+                guiGraphics.drawString(font, translateOrLiteral("jei_biome.mob_category." + currentCategory, currentCategory), x + 4, currentY, 0xFF555555, false);
                 currentY += SECTION_TITLE_HEIGHT;
             }
             if (isLastEntryInCategory(recipe, entry)) {
@@ -233,19 +233,33 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     private static void addMobSpawnTooltip(ITooltipBuilder tooltip, BiomeBlockIndexCache.MobSpawnEntry entry) {
-        tooltip.add(Component.translatable("jei_biome.tooltip.mob_category", Component.translatable("jei_biome.mob_category." + entry.category)).withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("jei_biome.tooltip.mob_category", translateOrLiteral("jei_biome.mob_category." + entry.category, entry.category)).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("jei_biome.tooltip.mob_weight", entry.weight).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("jei_biome.tooltip.mob_group", entry.minCount, entry.maxCount).withStyle(ChatFormatting.GRAY));
-        if ((entry.placementType != null && !entry.placementType.isBlank()) || (entry.heightmapType != null && !entry.heightmapType.isBlank())) {
+        if (entry.spawnCharge != null && !entry.spawnCharge.isBlank() && entry.spawnEnergyBudget != null && !entry.spawnEnergyBudget.isBlank()) {
+            tooltip.add(Component.translatable("jei_biome.tooltip.mob_spawn_cost", entry.spawnCharge, entry.spawnEnergyBudget).withStyle(ChatFormatting.GRAY));
+        }
+        if (!entry.hasPlacement) {
+            tooltip.add(Component.translatable("jei_biome.tooltip.mob_no_placement").withStyle(ChatFormatting.DARK_GRAY));
+        } else if ((entry.placementType != null && !entry.placementType.isBlank()) || (entry.heightmapType != null && !entry.heightmapType.isBlank())) {
             tooltip.add(Component.translatable("jei_biome.tooltip.mob_spawn_conditions").withStyle(ChatFormatting.DARK_GREEN));
             if (entry.placementType != null && !entry.placementType.isBlank()) {
-                tooltip.add(Component.translatable("jei_biome.tooltip.mob_placement", Component.translatable("jei_biome.mob_placement." + entry.placementType.toLowerCase(Locale.ROOT))).withStyle(ChatFormatting.GRAY));
+                String placementKey = "jei_biome.mob_placement." + entry.placementType.toLowerCase(Locale.ROOT);
+                tooltip.add(Component.translatable("jei_biome.tooltip.mob_placement", translateOrLiteral(placementKey, entry.placementType)).withStyle(ChatFormatting.GRAY));
             }
             if (entry.heightmapType != null && !entry.heightmapType.isBlank()) {
-                tooltip.add(Component.translatable("jei_biome.tooltip.mob_heightmap", Component.translatable("jei_biome.mob_heightmap." + entry.heightmapType.toLowerCase(Locale.ROOT))).withStyle(ChatFormatting.GRAY));
+                String heightmapKey = "jei_biome.mob_heightmap." + entry.heightmapType.toLowerCase(Locale.ROOT);
+                tooltip.add(Component.translatable("jei_biome.tooltip.mob_heightmap", translateOrLiteral(heightmapKey, entry.heightmapType)).withStyle(ChatFormatting.GRAY));
             }
             tooltip.add(Component.translatable("jei_biome.tooltip.mob_spawn_rules_note").withStyle(ChatFormatting.DARK_GRAY));
         }
+    }
+
+    private static Component translateOrLiteral(String translationKey, String fallback) {
+        if (I18n.exists(translationKey)) {
+            return Component.translatable(translationKey);
+        }
+        return Component.literal(fallback);
     }
 
     private static boolean hasDropItems(BiomeMobRecipe.MobDisplayEntry entry) {
@@ -287,7 +301,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         if (stack == null || stack.isEmpty()) {
             return List.of();
         }
-        ResourceLocation focusedItemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation focusedItemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (focusedItemId == null) {
             return List.of();
         }

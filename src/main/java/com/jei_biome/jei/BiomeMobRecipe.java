@@ -2,13 +2,13 @@ package com.jei_biome.jei;
 
 import com.jei_biome.Jei_biome;
 import com.jei_biome.data.BiomeBlockIndexCache;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -36,7 +36,7 @@ public final class BiomeMobRecipe {
             for (BiomeBlockIndexCache.MobSpawnEntry spawnEntry : mobEntry.spawns()) {
                 for (String itemId : spawnEntry.dropItems) {
                     ResourceLocation id = ResourceLocation.tryParse(itemId);
-                    Item item = id == null ? Items.AIR : ForgeRegistries.ITEMS.getValue(id);
+                    Item item = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
                     if (item != null && item != Items.AIR) {
                         lookup.putIfAbsent(item, new ItemStack(item));
                     }
@@ -81,7 +81,7 @@ public final class BiomeMobRecipe {
         for (Map.Entry<String, List<BiomeBlockIndexCache.MobSpawnEntry>> groupedEntry : groupedEntries.entrySet()) {
             BiomeBlockIndexCache.MobSpawnEntry firstEntry = groupedEntry.getValue().get(0);
             ResourceLocation entityId = ResourceLocation.tryParse(groupedEntry.getKey());
-            EntityType<?> entityType = entityId == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(entityId);
+            EntityType<?> entityType = entityId == null ? null : BuiltInRegistries.ENTITY_TYPE.get(entityId);
             ItemStack stack = ItemStack.EMPTY;
             if (entityType != null) {
                 SpawnEggItem eggItem = SpawnEggItem.byId(entityType);
@@ -102,7 +102,7 @@ public final class BiomeMobRecipe {
 
     static String getEntityName(BiomeBlockIndexCache.MobSpawnEntry entry) {
         ResourceLocation entityId = ResourceLocation.tryParse(entry.entityId);
-        EntityType<?> entityType = entityId == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(entityId);
+        EntityType<?> entityType = entityId == null ? null : BuiltInRegistries.ENTITY_TYPE.get(entityId);
         if (entityType != null) {
             return entityType.getDescription().getString();
         }
