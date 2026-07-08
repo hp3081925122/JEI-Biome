@@ -3,6 +3,10 @@ loaderVersion = "${loader_version_range}"
 license = "${mod_license}"
 displayTest = "IGNORE_SERVER_VERSION"
 
+[[mixins]]
+config = "jei_biome.mixins.json"
+requiredMods = ["emi"]
+
 [[mods]]
 modId = "${mod_id}"
 version = "${mod_full_version}"
@@ -30,3 +34,10 @@ type = "required"
 versionRange = "[19.27.0,)"
 ordering = "AFTER"
 side = "BOTH"
+
+[[dependencies."${mod_id}"]]
+modId = "emi"
+type = "optional"
+versionRange = "${emi_version_range}"
+ordering = "AFTER"
+side = "CLIENT"

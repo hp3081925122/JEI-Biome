@@ -1,6 +1,8 @@
 {
   "jei_biome.category.biome_blocks": "Biome Blocks",
   "jei_biome.category.biome_mobs": "Biome Mobs",
+  "emi.category.jei_biome.biome_blocks": "Biome Blocks",
+  "emi.category.jei_biome.biome_mobs": "Biome Mobs",
   "jei_biome.command.export.success": "Exported biome block index: %s",
   "jei_biome.command.export.failure": "Failed to export biome block index: %s",
   "jei_biome.label.terrain_blocks": "Biome terrain candidate blocks: %s",

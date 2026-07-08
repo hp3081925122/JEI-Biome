@@ -1,6 +1,8 @@
 {
   "jei_biome.category.biome_blocks": "群系方块",
   "jei_biome.category.biome_mobs": "群系生物",
+  "emi.category.jei_biome.biome_blocks": "群系方块",
+  "emi.category.jei_biome.biome_mobs": "群系生物",
   "jei_biome.command.export.success": "已导出群系方块索引：%s",
   "jei_biome.command.export.failure": "群系方块索引导出失败：%s",
   "jei_biome.label.terrain_blocks": "群系自身/地表候选方块：%s",
