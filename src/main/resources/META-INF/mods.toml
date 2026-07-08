@@ -67,3 +67,9 @@ mandatory = true
 versionRange = "[15.20.0.130,)"
 ordering = "AFTER"
 side = "CLIENT"
+[[dependencies."${mod_id}"]]
+modId = "emi"
+mandatory = false
+versionRange = "${emi_version_range}"
+ordering = "AFTER"
+side = "CLIENT"

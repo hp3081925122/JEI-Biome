@@ -2,11 +2,14 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.jei_biome.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "com.jei_biome.mixin.JeiBiomeMixinPlugin",
   "refmap": "jei_biome.refmap.json",
   "mixins": [
   ],
   "client": [
+    "emi.EmiApiMixin",
+    "emi.RecipeScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
