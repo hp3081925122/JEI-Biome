@@ -8,6 +8,7 @@ import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -77,6 +78,19 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
         widgets.addText(EmiBiomeText.biomeName(recipe.entry().biomeId), 2, 2, EmiBiomeText.TITLE_COLOR, false);
         EmiBiomeScrollWidget.Builder builder = EmiBiomeScrollWidget.builder();
         int y = 4;
+        ItemStack focusedDropStack = focusedDropStack();
+        List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = visibleDropSourceEntries(focusedDropStack);
+        if (!dropSourceEntries.isEmpty()) {
+            int slotY = builder.addWrappedText(dropSourceTitle(focusedDropStack), 4, y, EmiBiomeText.SECTION_COLOR);
+            for (int index = 0; index < dropSourceEntries.size(); index++) {
+                BiomeMobRecipe.MobDisplayEntry mobEntry = dropSourceEntries.get(index);
+                int x = 4 + index % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
+                int slotRowY = slotY + index / EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
+                builder.addStack(EmiStack.of(mobEntry.stack()), x, slotRowY, mobTooltip(mobEntry));
+            }
+            int rows = Math.max(1, (dropSourceEntries.size() + EmiBiomeText.GRID_COLUMNS - 1) / EmiBiomeText.GRID_COLUMNS);
+            y = slotY + rows * EmiBiomeText.SLOT_SIZE + EmiBiomeText.SECTION_GAP;
+        }
         if (recipe.mobEntries().isEmpty()) {
             builder.addWrappedText(Component.translatable("jei_biome.label.empty"), 8, y + 4, EmiBiomeText.EMPTY_COLOR);
             widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));
@@ -160,6 +174,55 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
             }
         }
         return false;
+    }
+
+    private ItemStack focusedDropStack() {
+        EmiIngredient focused = EmiLookupContext.currentLookup();
+        if (focused == null || focused.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        for (EmiStack stack : focused.getEmiStacks()) {
+            ItemStack itemStack = stack.getItemStack();
+            if (!itemStack.isEmpty() && !dropSourceEntries(itemStack).isEmpty()) {
+                return itemStack.copy();
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private List<BiomeMobRecipe.MobDisplayEntry> visibleDropSourceEntries(ItemStack stack) {
+        List<BiomeMobRecipe.MobDisplayEntry> entries = new ArrayList<>();
+        for (BiomeMobRecipe.MobDisplayEntry entry : dropSourceEntries(stack)) {
+            if (!entry.stack().isEmpty()) {
+                entries.add(entry);
+            }
+        }
+        return List.copyOf(entries);
+    }
+
+    private List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return List.of();
+        }
+        ResourceLocation focusedItemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (focusedItemId == null) {
+            return List.of();
+        }
+        List<BiomeMobRecipe.MobDisplayEntry> entries = new ArrayList<>();
+        for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
+            for (BiomeBlockIndexCache.MobSpawnEntry spawnEntry : entry.spawns()) {
+                if (spawnEntry.dropItems != null && spawnEntry.dropItems.contains(focusedItemId.toString())) {
+                    entries.add(entry);
+                    break;
+                }
+            }
+        }
+        return List.copyOf(entries);
+    }
+
+    private Component dropSourceTitle(ItemStack focusedDropStack) {
+        Component focusedName = focusedDropStack.getHoverName().copy().withStyle(ChatFormatting.BLUE);
+        return Component.translatable("jei_biome.label.mob_drop_sources", focusedName);
     }
 
 }
