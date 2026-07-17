@@ -5,6 +5,7 @@
   "emi.category.jei_biome.biome_mobs": "Biome Mobs",
   "jei_biome.command.export.success": "Exported biome block index: %s",
   "jei_biome.command.export.failure": "Failed to export biome block index: %s",
+  "jei_biome.message.missing_biome_index": "JEI Biome has no exported biome data yet. Run /jei_biome export after entering this world to collect biome information.",
   "jei_biome.label.terrain_blocks": "Biome terrain candidate blocks: %s",
   "jei_biome.label.surface_feature_blocks": "Surface feature blocks: %s",
   "jei_biome.label.underground_feature_blocks": "Underground feature blocks: %s",

@@ -31,7 +31,7 @@ side = "BOTH"
 [[dependencies."${mod_id}"]]
 modId = "jei"
 type = "required"
-versionRange = "[19.27.0,)"
+versionRange = "[19.39.0.368,)"
 ordering = "AFTER"
 side = "BOTH"
 

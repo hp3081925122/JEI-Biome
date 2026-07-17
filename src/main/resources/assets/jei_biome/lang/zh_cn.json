@@ -5,6 +5,7 @@
   "emi.category.jei_biome.biome_mobs": "群系生物",
   "jei_biome.command.export.success": "已导出群系方块索引：%s",
   "jei_biome.command.export.failure": "群系方块索引导出失败：%s",
+  "jei_biome.message.missing_biome_index": "JEI Biome 还没有导出的群系信息。进入此存档后请执行 /jei_biome export 收集群系信息。",
   "jei_biome.label.terrain_blocks": "群系自身/地表候选方块：%s",
   "jei_biome.label.surface_feature_blocks": "地表地物方块：%s",
   "jei_biome.label.underground_feature_blocks": "地下地物方块：%s",
