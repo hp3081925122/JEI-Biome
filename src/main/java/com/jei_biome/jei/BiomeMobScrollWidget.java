@@ -1,7 +1,6 @@
 package com.jei_biome.jei;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import mezz.jei.api.gui.inputs.IJeiInputHandler;
@@ -12,12 +11,12 @@ import mezz.jei.common.Internal;
 import mezz.jei.common.gui.elements.ScalableDrawable;
 import mezz.jei.common.gui.textures.Textures;
 import mezz.jei.common.util.ImmutableRect2i;
-import mezz.jei.common.util.MathUtil;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,19 +67,18 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
     }
 
     @Override
-    public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void drawWidget(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         scrollbarBackground.draw(guiGraphics, scrollbarArea);
         scrollbarMarker.draw(guiGraphics, getScrollbarMarkerArea());
 
-        PoseStack poseStack = guiGraphics.pose();
-        ScreenRectangle scissorArea = MathUtil.transform(contentsArea, poseStack.last().pose());
-        guiGraphics.enableScissor(scissorArea.left(), scissorArea.top(), scissorArea.right(), scissorArea.bottom());
-        poseStack.pushPose();
+        Matrix3x2fStack poseStack = guiGraphics.pose();
+        guiGraphics.enableScissor(contentsArea.getX(), contentsArea.getY(), contentsArea.getX() + contentsArea.getWidth(), contentsArea.getY() + contentsArea.getHeight());
+        poseStack.pushMatrix();
         int scrollPixels = getScrollPixels();
-        poseStack.translate(0.0D, -scrollPixels, 0.0D);
+        poseStack.translate(0.0F, -scrollPixels);
         BiomeMobRecipeCategory.drawScrollableContents(recipe, focusedDropStack, guiGraphics, 0, 0);
         drawSlots(guiGraphics);
-        poseStack.popPose();
+        poseStack.popMatrix();
         guiGraphics.disableScissor();
     }
 
@@ -155,7 +153,7 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
         return true;
     }
 
-    private void drawSlots(GuiGraphics guiGraphics) {
+    private void drawSlots(GuiGraphicsExtractor guiGraphics) {
         int slotCount = Math.min(contentSlots.size(), slotPlacements.size());
         for (int index = 0; index < slotCount; index++) {
             IRecipeSlotDrawable slot = contentSlots.get(index);

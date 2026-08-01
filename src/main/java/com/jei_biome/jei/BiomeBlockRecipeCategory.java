@@ -15,11 +15,11 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -77,7 +77,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     @Override
-    public ResourceLocation getRegistryName(BiomeBlockRecipe recipe) {
+    public Identifier getRegistryName(BiomeBlockRecipe recipe) {
         return recipe.id();
     }
 
@@ -110,9 +110,9 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     @Override
-    public void draw(BiomeBlockRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void draw(BiomeBlockRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
-        ResourceLocation biomeId = ResourceLocation.tryParse(recipe.entry().biomeId);
+        Identifier biomeId = Identifier.tryParse(recipe.entry().biomeId);
         Component biomeName = Component.literal(recipe.entry().biomeId);
         if (biomeId != null) {
             String translationKey = biomeId.toLanguageKey("biome");
@@ -120,7 +120,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
                 biomeName = Component.translatable(translationKey);
             }
         }
-        guiGraphics.drawString(font, biomeName, 4, 4, 0xFF2B2B2B, false);
+        guiGraphics.text(font, biomeName, 4, 4, 0xFF2B2B2B, false);
         drawPanel(guiGraphics, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, CONTENT_HEIGHT);
     }
 
@@ -132,7 +132,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         builder.addInputHandler(widget);
     }
 
-    static void drawScrollableContents(BiomeBlockRecipe recipe, GuiGraphics guiGraphics, int x, int y) {
+    static void drawScrollableContents(BiomeBlockRecipe recipe, GuiGraphicsExtractor guiGraphics, int x, int y) {
         Font font = Minecraft.getInstance().font;
         int currentY = y + 4;
         currentY = drawSection(recipe.entry().terrainBlocks.size(), Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks(), guiGraphics, font, x, currentY);
@@ -170,14 +170,14 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         }
     }
 
-    private static int drawSection(int count, Component title, List<ItemStack> stacks, GuiGraphics guiGraphics, Font font, int x, int y) {
+    private static int drawSection(int count, Component title, List<ItemStack> stacks, GuiGraphicsExtractor guiGraphics, Font font, int x, int y) {
         List<FormattedCharSequence> titleLines = font.split(title, TEXT_WIDTH);
         for (int index = 0; index < titleLines.size(); index++) {
-            guiGraphics.drawString(font, titleLines.get(index), x + 4, y + index * TITLE_LINE_HEIGHT, 0xFF555555, false);
+            guiGraphics.text(font, titleLines.get(index), x + 4, y + index * TITLE_LINE_HEIGHT, 0xFF555555, false);
         }
         int titleHeight = getTitleHeight(font, title);
         if (count <= 0) {
-            guiGraphics.drawString(font, Component.translatable("jei_biome.label.empty"), x + 8, y + titleHeight, 0xFF888888, false);
+            guiGraphics.text(font, Component.translatable("jei_biome.label.empty"), x + 8, y + titleHeight, 0xFF888888, false);
         }
         return y + getSectionHeight(font, title, stacks.size());
     }
@@ -221,7 +221,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         return Math.max(SECTION_TITLE_HEIGHT, lineCount * TITLE_LINE_HEIGHT + 2);
     }
 
-    private static void drawPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+    private static void drawPanel(GuiGraphicsExtractor guiGraphics, int x, int y, int width, int height) {
         guiGraphics.fill(x, y, x + width, y + height, 0xFFE3E3E3);
         guiGraphics.fill(x, y, x + width, y + 1, 0xFFF8F8F8);
         guiGraphics.fill(x, y, x + 1, y + height, 0xFFF8F8F8);

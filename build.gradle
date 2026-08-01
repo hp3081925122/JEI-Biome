@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'eclipse'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.141'
+    id 'net.neoforged.moddev' version '2.0.143'
 }
 
 group = mod_group_id
@@ -12,9 +12,7 @@ base {
     archivesName = mod_id
 }
 
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
-}
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
     version = neo_version
@@ -37,7 +35,7 @@ neoForge {
         }
 
         data {
-            data()
+            clientData()
             programArguments.addAll '--mod', mod_id, '--all',
                     '--output', file('src/generated/resources/').absolutePath,
                     '--existing', file('src/main/resources/').absolutePath
@@ -60,6 +58,39 @@ sourceSets.main.resources {
     srcDir 'src/generated/resources'
 }
 
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_full_version       : project.version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+sourceSets.main.java {
+    exclude 'com/jei_biome/emi/**'
+    exclude 'com/jei_biome/mixin/**'
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
 repositories {
     maven {
         name = 'NeoForge'
@@ -69,19 +100,12 @@ repositories {
         name = 'JEI'
         url = 'https://maven.blamejared.com'
     }
-    maven {
-        name = 'TerraformersMC'
-        url = 'https://maven.terraformersmc.com/releases'
-    }
 }
 
 dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
-    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
-    compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
-    compileOnly "dev.emi:emi-neoforge:${emi_version}"
-    runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 }
 
 tasks.named('processResources', ProcessResources).configure {
@@ -91,7 +115,6 @@ tasks.named('processResources', ProcessResources).configure {
             neo_version            : neo_version,
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
-            emi_version_range      : emi_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
@@ -103,9 +126,7 @@ tasks.named('processResources', ProcessResources).configure {
 
     inputs.properties replaceProperties
 
-    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
-        expand replaceProperties
-    }
+    filesMatching(['pack.mcmeta']) { expand replaceProperties }
 }
 
 tasks.named('jar', Jar).configure {

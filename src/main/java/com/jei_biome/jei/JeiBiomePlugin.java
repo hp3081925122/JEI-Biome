@@ -10,7 +10,7 @@ import mezz.jei.api.recipe.advanced.ISimpleRecipeManagerPlugin;
 import mezz.jei.api.registration.IAdvancedRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -26,10 +26,10 @@ import java.util.Set;
 public final class JeiBiomePlugin implements IModPlugin {
 
     private static volatile CachedRecipes cachedRecipes;
-    private final ResourceLocation pluginId = ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, "plugin");
+    private final Identifier pluginId = Identifier.fromNamespaceAndPath(Jei_biome.MODID, "plugin");
 
     @Override
-    public ResourceLocation getPluginUid() {
+    public Identifier getPluginUid() {
         return pluginId;
     }
 

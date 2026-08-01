@@ -3,7 +3,7 @@ package com.jei_biome.jei;
 import com.jei_biome.Jei_biome;
 import com.jei_biome.data.BiomeBlockIndexCache;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -20,13 +20,13 @@ import java.util.Map;
 public final class BiomeMobRecipe {
 
     private final BiomeBlockIndexCache.BiomeEntry entry;
-    private final ResourceLocation id;
+    private final Identifier id;
     private final List<MobDisplayEntry> mobEntries;
     private final List<ItemStack> lookupStacks;
 
     public BiomeMobRecipe(BiomeBlockIndexCache.BiomeEntry entry) {
         this.entry = entry;
-        this.id = ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, "mobs_" + entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
+        this.id = Identifier.fromNamespaceAndPath(Jei_biome.MODID, "mobs_" + entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
         this.mobEntries = buildMobEntries(entry.mobSpawns);
         LinkedHashMap<Item, ItemStack> lookup = new LinkedHashMap<>();
         for (MobDisplayEntry mobEntry : mobEntries) {
@@ -35,8 +35,8 @@ public final class BiomeMobRecipe {
             }
             for (BiomeBlockIndexCache.MobSpawnEntry spawnEntry : mobEntry.spawns()) {
                 for (String itemId : spawnEntry.dropItems) {
-                    ResourceLocation id = ResourceLocation.tryParse(itemId);
-                    Item item = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
+                    Identifier id = Identifier.tryParse(itemId);
+                    Item item = id == null ? Items.AIR : BuiltInRegistries.ITEM.getValue(id);
                     if (item != null && item != Items.AIR) {
                         lookup.putIfAbsent(item, new ItemStack(item));
                     }
@@ -50,7 +50,7 @@ public final class BiomeMobRecipe {
         return entry;
     }
 
-    public ResourceLocation id() {
+    public Identifier id() {
         return id;
     }
 
@@ -80,14 +80,11 @@ public final class BiomeMobRecipe {
         List<MobDisplayEntry> result = new ArrayList<>();
         for (Map.Entry<String, List<BiomeBlockIndexCache.MobSpawnEntry>> groupedEntry : groupedEntries.entrySet()) {
             BiomeBlockIndexCache.MobSpawnEntry firstEntry = groupedEntry.getValue().get(0);
-            ResourceLocation entityId = ResourceLocation.tryParse(groupedEntry.getKey());
-            EntityType<?> entityType = entityId == null ? null : BuiltInRegistries.ENTITY_TYPE.get(entityId);
+            Identifier entityId = Identifier.tryParse(groupedEntry.getKey());
+            EntityType<?> entityType = entityId == null ? null : BuiltInRegistries.ENTITY_TYPE.getValue(entityId);
             ItemStack stack = ItemStack.EMPTY;
             if (entityType != null) {
-                SpawnEggItem eggItem = SpawnEggItem.byId(entityType);
-                if (eggItem != null && eggItem != Items.AIR) {
-                    stack = new ItemStack(eggItem);
-                }
+                stack = SpawnEggItem.byId(entityType).map(ItemStack::new).orElse(ItemStack.EMPTY);
             }
             List<BiomeBlockIndexCache.MobSpawnEntry> spawns = new ArrayList<>(groupedEntry.getValue());
             spawns.sort(Comparator.comparing(BiomeMobRecipe::mobSpawnSortKey, String.CASE_INSENSITIVE_ORDER));
@@ -101,8 +98,8 @@ public final class BiomeMobRecipe {
     }
 
     static String getEntityName(BiomeBlockIndexCache.MobSpawnEntry entry) {
-        ResourceLocation entityId = ResourceLocation.tryParse(entry.entityId);
-        EntityType<?> entityType = entityId == null ? null : BuiltInRegistries.ENTITY_TYPE.get(entityId);
+        Identifier entityId = Identifier.tryParse(entry.entityId);
+        EntityType<?> entityType = entityId == null ? null : BuiltInRegistries.ENTITY_TYPE.getValue(entityId);
         if (entityType != null) {
             return entityType.getDescription().getString();
         }

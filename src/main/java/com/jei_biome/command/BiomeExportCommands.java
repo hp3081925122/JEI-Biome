@@ -17,7 +17,7 @@ public final class BiomeExportCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("jei_biome")
-                .requires(source -> source.hasPermission(2))
+                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("export")
                         .executes(BiomeExportCommands::export)));
     }

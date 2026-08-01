@@ -16,11 +16,11 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -79,7 +79,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     @Override
-    public ResourceLocation getRegistryName(BiomeMobRecipe recipe) {
+    public Identifier getRegistryName(BiomeMobRecipe recipe) {
         return recipe.id();
     }
 
@@ -107,9 +107,9 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     @Override
-    public void draw(BiomeMobRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void draw(BiomeMobRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
-        guiGraphics.drawString(font, getBiomeName(recipe.entry().biomeId), 4, 4, 0xFF2B2B2B, false);
+        guiGraphics.text(font, getBiomeName(recipe.entry().biomeId), 4, 4, 0xFF2B2B2B, false);
         drawPanel(guiGraphics, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, CONTENT_HEIGHT);
     }
 
@@ -121,7 +121,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         builder.addInputHandler(widget);
     }
 
-    static void drawScrollableContents(BiomeMobRecipe recipe, ItemStack focusedDropStack, GuiGraphics guiGraphics, int x, int y) {
+    static void drawScrollableContents(BiomeMobRecipe recipe, ItemStack focusedDropStack, GuiGraphicsExtractor guiGraphics, int x, int y) {
         Font font = Minecraft.getInstance().font;
         int currentY = y + 4;
         List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = getVisibleDropSourceEntries(recipe, focusedDropStack);
@@ -133,7 +133,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         }
         String currentCategory = "";
         if (recipe.mobEntries().isEmpty()) {
-            guiGraphics.drawString(font, Component.translatable("jei_biome.label.empty"), x + 8, currentY, 0xFF888888, false);
+            guiGraphics.text(font, Component.translatable("jei_biome.label.empty"), x + 8, currentY, 0xFF888888, false);
             return;
         }
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
@@ -212,7 +212,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     private static Component getBiomeName(String rawBiomeId) {
-        ResourceLocation biomeId = ResourceLocation.tryParse(rawBiomeId);
+        Identifier biomeId = Identifier.tryParse(rawBiomeId);
         if (biomeId != null) {
             String translationKey = biomeId.toLanguageKey("biome");
             if (I18n.exists(translationKey)) {
@@ -307,7 +307,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         if (stack == null || stack.isEmpty()) {
             return List.of();
         }
-        ResourceLocation focusedItemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Identifier focusedItemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (focusedItemId == null) {
             return List.of();
         }
@@ -338,10 +338,10 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         return Component.translatable("jei_biome.label.mob_drop_sources", focusedName);
     }
 
-    private static int drawWrappedText(GuiGraphics guiGraphics, Font font, Component text, int x, int y, int color) {
+    private static int drawWrappedText(GuiGraphicsExtractor guiGraphics, Font font, Component text, int x, int y, int color) {
         List<FormattedCharSequence> lines = font.split(text, TEXT_WIDTH);
         for (int index = 0; index < lines.size(); index++) {
-            guiGraphics.drawString(font, lines.get(index), x, y + index * TITLE_LINE_HEIGHT, color, false);
+            guiGraphics.text(font, lines.get(index), x, y + index * TITLE_LINE_HEIGHT, color, false);
         }
         return getTitleHeight(font, text);
     }
@@ -370,7 +370,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         return value.replace('_', ' ');
     }
 
-    private static void drawPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+    private static void drawPanel(GuiGraphicsExtractor guiGraphics, int x, int y, int width, int height) {
         guiGraphics.fill(x, y, x + width, y + height, 0xFFE3E3E3);
         guiGraphics.fill(x, y, x + width, y + 1, 0xFFF8F8F8);
         guiGraphics.fill(x, y, x + 1, y + height, 0xFFF8F8F8);

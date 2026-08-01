@@ -12,12 +12,12 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.RandomSource;
+import net.minecraft.util.random.Weighted;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.entity.SpawnPlacementType;
@@ -42,7 +42,6 @@ import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFea
 import net.minecraft.world.level.levelgen.feature.configurations.MultifaceGrowthConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.RandomFeatureConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.RandomPatchConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.ReplaceBlockConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.SimpleBlockConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.SimpleRandomFeatureConfiguration;
@@ -71,20 +70,20 @@ import java.util.Set;
 public final class BiomeBlockIndexExporter {
 
     private static final int MAX_FEATURE_DEPTH = 8;
-    public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = BlockTags.create(ResourceLocation.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
+    public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = BlockTags.create(Identifier.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
 
     private BiomeBlockIndexExporter() {
     }
 
     public static Path export(MinecraftServer server) throws Exception {
-        Registry<Biome> biomeRegistry = server.registryAccess().registryOrThrow(Registries.BIOME);
-        Registry<net.minecraft.world.level.levelgen.placement.PlacedFeature> placedFeatureRegistry = server.registryAccess().registryOrThrow(Registries.PLACED_FEATURE);
-        Registry<ConfiguredFeature<?, ?>> configuredFeatureRegistry = server.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
+        Registry<Biome> biomeRegistry = server.registryAccess().lookupOrThrow(Registries.BIOME);
+        Registry<net.minecraft.world.level.levelgen.placement.PlacedFeature> placedFeatureRegistry = server.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE);
+        Registry<ConfiguredFeature<?, ?>> configuredFeatureRegistry = server.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE);
         BiomeBlockIndexCache cache = new BiomeBlockIndexCache();
         cache.generatedAt = Instant.now().toString();
-        for (var biomeEntry : biomeRegistry.entrySet().stream().sorted(Comparator.comparing(entry -> entry.getKey().location().toString())).toList()) {
+        for (var biomeEntry : biomeRegistry.entrySet().stream().sorted(Comparator.comparing(entry -> entry.getKey().identifier().toString())).toList()) {
             BiomeBlockIndexCache.BiomeEntry exportedBiome = new BiomeBlockIndexCache.BiomeEntry();
-            exportedBiome.biomeId = biomeEntry.getKey().location().toString();
+            exportedBiome.biomeId = biomeEntry.getKey().identifier().toString();
             LinkedHashSet<String> placedFeatureIds = new LinkedHashSet<>();
             LinkedHashSet<String> configuredFeatureIds = new LinkedHashSet<>();
             LinkedHashSet<String> terrainBlocks = new LinkedHashSet<>();
@@ -104,10 +103,10 @@ public final class BiomeBlockIndexExporter {
                 for (Holder<net.minecraft.world.level.levelgen.placement.PlacedFeature> placedFeatureHolder : stepFeatures) {
                     net.minecraft.world.level.levelgen.placement.PlacedFeature placedFeature = placedFeatureHolder.value();
                     exportedBiome.placedFeatureCount++;
-                    placedFeatureHolder.unwrapKey().ifPresent(key -> placedFeatureIds.add(key.location().toString()));
-                    placedFeatureRegistry.getResourceKey(placedFeature).ifPresent(key -> placedFeatureIds.add(key.location().toString()));
-                    String placedFeatureId = placedFeatureHolder.unwrapKey().map(key -> key.location().toString())
-                            .or(() -> placedFeatureRegistry.getResourceKey(placedFeature).map(key -> key.location().toString()))
+                    placedFeatureHolder.unwrapKey().ifPresent(key -> placedFeatureIds.add(key.identifier().toString()));
+                    placedFeatureRegistry.getResourceKey(placedFeature).ifPresent(key -> placedFeatureIds.add(key.identifier().toString()));
+                    String placedFeatureId = placedFeatureHolder.unwrapKey().map(key -> key.identifier().toString())
+                            .or(() -> placedFeatureRegistry.getResourceKey(placedFeature).map(key -> key.identifier().toString()))
                             .orElse("unknown");
                     collectPlacedFeatureBlocks(placedFeature, configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, 0);
                 }
@@ -152,26 +151,27 @@ public final class BiomeBlockIndexExporter {
     private static void collectMobSpawns(MinecraftServer server, Biome biome, List<BiomeBlockIndexCache.MobSpawnEntry> target) {
         MobSpawnSettings mobSettings = biome.getMobSettings();
         for (MobCategory category : mobSettings.getSpawnerTypes()) {
-            for (MobSpawnSettings.SpawnerData spawnerData : mobSettings.getMobs(category).unwrap()) {
-                ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(spawnerData.type);
+            for (Weighted<MobSpawnSettings.SpawnerData> weightedSpawner : mobSettings.getMobs(category).unwrap()) {
+                MobSpawnSettings.SpawnerData spawnerData = weightedSpawner.value();
+                Identifier entityId = BuiltInRegistries.ENTITY_TYPE.getKey(spawnerData.type());
                 if (entityId == null) {
                     continue;
                 }
                 BiomeBlockIndexCache.MobSpawnEntry entry = new BiomeBlockIndexCache.MobSpawnEntry();
                 entry.entityId = entityId.toString();
                 entry.category = category.getSerializedName();
-                entry.weight = spawnerData.getWeight().asInt();
-                entry.minCount = spawnerData.minCount;
-                entry.maxCount = spawnerData.maxCount;
-                entry.placementType = summarizeSpawnPlacementType(SpawnPlacements.getPlacementType(spawnerData.type));
-                entry.heightmapType = SpawnPlacements.getHeightmapType(spawnerData.type).getSerializedName();
-                entry.hasPlacement = SpawnPlacements.hasPlacement(spawnerData.type);
-                MobSpawnSettings.MobSpawnCost spawnCost = mobSettings.getMobSpawnCost(spawnerData.type);
+                entry.weight = weightedSpawner.weight();
+                entry.minCount = spawnerData.minCount();
+                entry.maxCount = spawnerData.maxCount();
+                entry.placementType = summarizeSpawnPlacementType(SpawnPlacements.getPlacementType(spawnerData.type()));
+                entry.heightmapType = SpawnPlacements.getHeightmapType(spawnerData.type()).getSerializedName();
+                entry.hasPlacement = SpawnPlacements.hasPlacement(spawnerData.type());
+                MobSpawnSettings.MobSpawnCost spawnCost = mobSettings.getMobSpawnCost(spawnerData.type());
                 if (spawnCost != null) {
                     entry.spawnCharge = formatDouble(spawnCost.charge());
                     entry.spawnEnergyBudget = formatDouble(spawnCost.energyBudget());
                 }
-                entry.dropItems = collectEntityDropItems(server, spawnerData.type.getDefaultLootTable());
+                entry.dropItems = collectEntityDropItems(server, spawnerData.type().getDefaultLootTable().orElse(null));
                 target.add(entry);
             }
         }
@@ -185,11 +185,11 @@ public final class BiomeBlockIndexExporter {
     }
 
     private static List<String> collectEntityDropItems(MinecraftServer server, ResourceKey<LootTable> lootTableId) {
-        if (lootTableId == null || "minecraft:empty".equals(lootTableId.location().toString())) {
+        if (lootTableId == null || "minecraft:empty".equals(lootTableId.identifier().toString())) {
             return List.of();
         }
-        ResourceLocation lootLocation = lootTableId.location();
-        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_table/" + lootLocation.getPath() + ".json");
+        Identifier lootLocation = lootTableId.identifier();
+        Identifier resourceId = Identifier.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_table/" + lootLocation.getPath() + ".json");
         return server.getResourceManager().getResource(resourceId)
                 .map(resource -> {
                     LinkedHashSet<String> itemIds = new LinkedHashSet<>();
@@ -235,8 +235,8 @@ public final class BiomeBlockIndexExporter {
         }
         JsonObject object = element.getAsJsonObject();
         if (object.has("type") && "minecraft:item".equals(object.get("type").getAsString()) && object.has("name")) {
-            ResourceLocation itemId = ResourceLocation.tryParse(object.get("name").getAsString());
-            Item item = itemId == null ? null : BuiltInRegistries.ITEM.get(itemId);
+            Identifier itemId = Identifier.tryParse(object.get("name").getAsString());
+            Item item = itemId == null ? null : BuiltInRegistries.ITEM.getValue(itemId);
             if (item != null) {
                 itemIds.add(itemId.toString());
             }
@@ -265,7 +265,7 @@ public final class BiomeBlockIndexExporter {
             return;
         }
         ConfiguredFeature<?, ?> configuredFeature = placedFeature.feature().value();
-        configuredFeatureRegistry.getResourceKey(configuredFeature).ifPresent(key -> configuredFeatureIds.add(key.location().toString()));
+        configuredFeatureRegistry.getResourceKey(configuredFeature).ifPresent(key -> configuredFeatureIds.add(key.identifier().toString()));
         collectConfiguredFeatureBlocks(configuredFeature, placedFeature, configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
     }
 
@@ -304,15 +304,15 @@ public final class BiomeBlockIndexExporter {
             addBlockState(blockStateConfiguration.state, resolveFeatureTarget(decorationStep, surfaceFeatureBlocks, undergroundFeatureBlocks));
         } else if (config instanceof TreeConfiguration treeConfiguration) {
             addProviderBlock(treeConfiguration.trunkProvider, surfaceFeatureBlocks);
-            addProviderBlock(treeConfiguration.dirtProvider, terrainBlocks);
+            addProviderBlock(treeConfiguration.belowTrunkProvider, terrainBlocks);
             addProviderBlock(treeConfiguration.foliageProvider, surfaceFeatureBlocks);
         } else if (config instanceof HugeMushroomFeatureConfiguration mushroomConfiguration) {
-            addProviderBlock(mushroomConfiguration.capProvider, surfaceFeatureBlocks);
-            addProviderBlock(mushroomConfiguration.stemProvider, surfaceFeatureBlocks);
+            addProviderBlock(mushroomConfiguration.capProvider(), surfaceFeatureBlocks);
+            addProviderBlock(mushroomConfiguration.stemProvider(), surfaceFeatureBlocks);
         } else if (config instanceof BlockPileConfiguration blockPileConfiguration) {
             addProviderBlock(blockPileConfiguration.stateProvider, resolveFeatureTarget(decorationStep, surfaceFeatureBlocks, undergroundFeatureBlocks));
         } else if (config instanceof DiskConfiguration diskConfiguration) {
-            addProviderBlock(diskConfiguration.stateProvider().fallback(), terrainBlocks);
+            addProviderBlock(diskConfiguration.stateProvider(), terrainBlocks);
         } else if (config instanceof DeltaFeatureConfiguration deltaFeatureConfiguration) {
             addBlockState(deltaFeatureConfiguration.contents(), resolveFeatureTarget(decorationStep, surfaceFeatureBlocks, undergroundFeatureBlocks));
             addBlockState(deltaFeatureConfiguration.rim(), resolveFeatureTarget(decorationStep, surfaceFeatureBlocks, undergroundFeatureBlocks));
@@ -331,8 +331,6 @@ public final class BiomeBlockIndexExporter {
                 addOreOrUndergroundBlockState(state, oreBlocks, undergroundFeatureBlocks);
                 addOreDistributionLine(state, sourcePlacedFeature, placedFeatureId, 0, oreDistributionLines);
             }
-        } else if (config instanceof RandomPatchConfiguration randomPatchConfiguration) {
-            collectPlacedFeatureBlocks(randomPatchConfiguration.feature().value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
         } else if (config instanceof VegetationPatchConfiguration vegetationPatchConfiguration) {
             addProviderBlock(vegetationPatchConfiguration.groundState, terrainBlocks);
             collectPlacedFeatureBlocks(vegetationPatchConfiguration.vegetationFeature.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
@@ -362,17 +360,57 @@ public final class BiomeBlockIndexExporter {
         if (provider == null) {
             return;
         }
-        for (long seed = 1L; seed <= 5L; seed++) {
-            addBlockState(provider.getState(RandomSource.create(seed), net.minecraft.core.BlockPos.ZERO), target);
-        }
+        BlockStateProvider.CODEC.encodeStart(JsonOps.INSTANCE, provider).result().ifPresent(element -> collectProviderBlocks(element, target));
     }
 
     private static void addProviderOreOrUndergroundBlock(BlockStateProvider provider, Set<String> oreBlocks, Set<String> undergroundFeatureBlocks) {
         if (provider == null) {
             return;
         }
-        for (long seed = 1L; seed <= 5L; seed++) {
-            addOreOrUndergroundBlockState(provider.getState(RandomSource.create(seed), net.minecraft.core.BlockPos.ZERO), oreBlocks, undergroundFeatureBlocks);
+        BlockStateProvider.CODEC.encodeStart(JsonOps.INSTANCE, provider).result().ifPresent(element -> collectProviderOreBlocks(element, oreBlocks, undergroundFeatureBlocks));
+    }
+
+    private static void collectProviderBlocks(JsonElement element, Set<String> target) {
+        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+            Identifier id = Identifier.tryParse(element.getAsString());
+            Block block = id == null ? null : BuiltInRegistries.BLOCK.getValue(id);
+            if (block != null) {
+                addBlock(block, target);
+            }
+            return;
+        }
+        if (element.isJsonArray()) {
+            for (JsonElement child : element.getAsJsonArray()) {
+                collectProviderBlocks(child, target);
+            }
+            return;
+        }
+        if (element.isJsonObject()) {
+            for (Map.Entry<String, JsonElement> entry : element.getAsJsonObject().entrySet()) {
+                collectProviderBlocks(entry.getValue(), target);
+            }
+        }
+    }
+
+    private static void collectProviderOreBlocks(JsonElement element, Set<String> oreBlocks, Set<String> undergroundFeatureBlocks) {
+        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+            Identifier id = Identifier.tryParse(element.getAsString());
+            Block block = id == null ? null : BuiltInRegistries.BLOCK.getValue(id);
+            if (block != null) {
+                addOreOrUndergroundBlockState(block.defaultBlockState(), oreBlocks, undergroundFeatureBlocks);
+            }
+            return;
+        }
+        if (element.isJsonArray()) {
+            for (JsonElement child : element.getAsJsonArray()) {
+                collectProviderOreBlocks(child, oreBlocks, undergroundFeatureBlocks);
+            }
+            return;
+        }
+        if (element.isJsonObject()) {
+            for (Map.Entry<String, JsonElement> entry : element.getAsJsonObject().entrySet()) {
+                collectProviderOreBlocks(entry.getValue(), oreBlocks, undergroundFeatureBlocks);
+            }
         }
     }
 
@@ -388,7 +426,7 @@ public final class BiomeBlockIndexExporter {
         if (state == null || state.is(BIOME_BLOCK_BLACKLIST)) {
             return;
         }
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         if (id == null) {
             return;
         }
@@ -521,7 +559,7 @@ public final class BiomeBlockIndexExporter {
         if (block == null || block == Blocks.AIR || block == Blocks.CAVE_AIR || block == Blocks.VOID_AIR || block.defaultBlockState().is(BIOME_BLOCK_BLACKLIST)) {
             return;
         }
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        Identifier id = BuiltInRegistries.BLOCK.getKey(block);
         if (id != null) {
             target.add(id.toString());
         }

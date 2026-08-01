@@ -3,7 +3,7 @@ package com.jei_biome.jei;
 import com.jei_biome.Jei_biome;
 import com.jei_biome.data.BiomeBlockIndexCache;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +21,7 @@ import java.util.Map;
 public final class BiomeBlockRecipe {
 
     private final BiomeBlockIndexCache.BiomeEntry entry;
-    private final ResourceLocation id;
+    private final Identifier id;
     private final List<ItemStack> terrainStacks;
     private final List<ItemStack> surfaceFeatureStacks;
     private final List<ItemStack> undergroundFeatureStacks;
@@ -31,7 +31,7 @@ public final class BiomeBlockRecipe {
 
     public BiomeBlockRecipe(BiomeBlockIndexCache.BiomeEntry entry) {
         this.entry = entry;
-        this.id = ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
+        this.id = Identifier.fromNamespaceAndPath(Jei_biome.MODID, entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
         this.terrainStacks = toStacks(entry.terrainBlocks);
         this.surfaceFeatureStacks = toStacks(entry.surfaceFeatureBlocks);
         this.undergroundFeatureStacks = toStacks(entry.undergroundFeatureBlocks);
@@ -57,7 +57,7 @@ public final class BiomeBlockRecipe {
         return entry;
     }
 
-    public ResourceLocation id() {
+    public Identifier id() {
         return id;
     }
 
@@ -81,7 +81,7 @@ public final class BiomeBlockRecipe {
         if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) {
             return List.of();
         }
-        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(blockItem.getBlock());
+        Identifier blockId = BuiltInRegistries.BLOCK.getKey(blockItem.getBlock());
         if (blockId == null) {
             return List.of();
         }
@@ -98,8 +98,8 @@ public final class BiomeBlockRecipe {
         }
         List<ItemStack> stacks = new ArrayList<>();
         for (String rawId : blockIds) {
-            ResourceLocation id = ResourceLocation.tryParse(rawId);
-            Block block = id == null ? null : BuiltInRegistries.BLOCK.get(id);
+            Identifier id = Identifier.tryParse(rawId);
+            Block block = id == null ? null : BuiltInRegistries.BLOCK.getValue(id);
             Item item = block == null ? Items.AIR : block.asItem();
             if (item != Items.AIR) {
                 stacks.add(new ItemStack(item));
