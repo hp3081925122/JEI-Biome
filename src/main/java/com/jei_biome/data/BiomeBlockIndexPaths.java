@@ -1,6 +1,6 @@
 package com.jei_biome.data;
 
-import net.neoforged.fml.loading.FMLPaths;
+import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Path;
 
@@ -10,6 +10,6 @@ public final class BiomeBlockIndexPaths {
     }
 
     public static Path getCachePath() {
-        return FMLPaths.CONFIGDIR.get().resolve("jei_biome").resolve("biome_blocks.json");
+        return FabricLoader.getInstance().getConfigDir().resolve("jei_biome").resolve("biome_blocks.json");
     }
 }

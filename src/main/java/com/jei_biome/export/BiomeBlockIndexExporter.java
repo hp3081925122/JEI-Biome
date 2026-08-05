@@ -15,7 +15,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.MobCategory;
@@ -52,7 +51,7 @@ import net.minecraft.world.level.levelgen.feature.configurations.VegetationPatch
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.neoforged.neoforge.common.Tags;
+import net.fabricmc.fabric.api.tag.convention.v1.ConventionalBlockTags;
 
 import java.io.BufferedReader;
 import java.io.Writer;
@@ -71,7 +70,7 @@ import java.util.Set;
 public final class BiomeBlockIndexExporter {
 
     private static final int MAX_FEATURE_DEPTH = 8;
-    public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = BlockTags.create(ResourceLocation.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
+    public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
 
     private BiomeBlockIndexExporter() {
     }
@@ -151,7 +150,7 @@ public final class BiomeBlockIndexExporter {
 
     private static void collectMobSpawns(MinecraftServer server, Biome biome, List<BiomeBlockIndexCache.MobSpawnEntry> target) {
         MobSpawnSettings mobSettings = biome.getMobSettings();
-        for (MobCategory category : mobSettings.getSpawnerTypes()) {
+        for (MobCategory category : MobCategory.values()) {
             for (MobSpawnSettings.SpawnerData spawnerData : mobSettings.getMobs(category).unwrap()) {
                 ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(spawnerData.type);
                 if (entityId == null) {
@@ -165,7 +164,7 @@ public final class BiomeBlockIndexExporter {
                 entry.maxCount = spawnerData.maxCount;
                 entry.placementType = summarizeSpawnPlacementType(SpawnPlacements.getPlacementType(spawnerData.type));
                 entry.heightmapType = SpawnPlacements.getHeightmapType(spawnerData.type).getSerializedName();
-                entry.hasPlacement = SpawnPlacements.hasPlacement(spawnerData.type);
+                entry.hasPlacement = SpawnPlacements.getPlacementType(spawnerData.type) != SpawnPlacementTypes.NO_RESTRICTIONS;
                 MobSpawnSettings.MobSpawnCost spawnCost = mobSettings.getMobSpawnCost(spawnerData.type);
                 if (spawnCost != null) {
                     entry.spawnCharge = formatDouble(spawnCost.charge());
@@ -377,7 +376,7 @@ public final class BiomeBlockIndexExporter {
     }
 
     private static void addOreOrUndergroundBlockState(BlockState state, Set<String> oreBlocks, Set<String> undergroundFeatureBlocks) {
-        if (state != null && state.is(Tags.Blocks.ORES)) {
+        if (state != null && state.is(ConventionalBlockTags.ORES)) {
             addBlockState(state, oreBlocks);
         } else {
             addBlockState(state, undergroundFeatureBlocks);

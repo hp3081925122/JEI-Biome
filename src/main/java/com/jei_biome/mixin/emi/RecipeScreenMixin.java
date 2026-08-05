@@ -19,7 +19,7 @@ public abstract class RecipeScreenMixin {
     @Shadow
     private List<WidgetGroup> currentPage;
 
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"mouseClicked", "method_25402"}, at = @At("HEAD"), cancellable = true)
     private void jeiBiome$clickRecipeWidgets(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         int screenX = (int) mouseX;
         int screenY = (int) mouseY;
@@ -41,7 +41,7 @@ public abstract class RecipeScreenMixin {
         }
     }
 
-    @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"mouseScrolled", "method_25401"}, at = @At("HEAD"), cancellable = true)
     private void jeiBiome$scrollRecipeWidgets(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir) {
         int screenX = (int) mouseX;
         int screenY = (int) mouseY;
@@ -63,7 +63,7 @@ public abstract class RecipeScreenMixin {
         }
     }
 
-    @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"mouseDragged", "method_25403"}, at = @At("HEAD"), cancellable = true)
     private void jeiBiome$dragRecipeWidgets(double mouseX, double mouseY, int button, double dragX, double dragY, CallbackInfoReturnable<Boolean> cir) {
         int screenX = (int) mouseX;
         int screenY = (int) mouseY;
@@ -82,7 +82,7 @@ public abstract class RecipeScreenMixin {
         }
     }
 
-    @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"mouseReleased", "method_25406"}, at = @At("HEAD"), cancellable = true)
     private void jeiBiome$releaseRecipeWidgets(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         int screenX = (int) mouseX;
         int screenY = (int) mouseY;
