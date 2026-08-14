@@ -1,14 +1,15 @@
 package com.jei_biome;
 
-import com.jei_biome.command.BiomeExportCommands;
+import com.jei_biome.client.BiomeIndexClientHandler;
 import com.jei_biome.data.BiomeBlockIndexCacheLoader;
+import com.jei_biome.export.BiomeBlockIndexExporter;
 import com.mojang.logging.LogUtils;
-import net.minecraft.network.chat.Component;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
 @Mod(Jei_biome.MODID)
@@ -19,18 +20,19 @@ public class Jei_biome {
 
     public Jei_biome() {
         NeoForge.EVENT_BUS.register(this);
-    }
-
-    @SubscribeEvent
-    public void onRegisterCommands(RegisterCommandsEvent event) {
-        BiomeExportCommands.register(event.getDispatcher());
-    }
-
-    @SubscribeEvent
-    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!BiomeBlockIndexCacheLoader.load().biomes.isEmpty()) {
-            return;
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            NeoForge.EVENT_BUS.register(BiomeIndexClientHandler.class);
         }
-        event.getEntity().sendSystemMessage(Component.translatable("jei_biome.message.missing_biome_index"));
+    }
+
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
+        try {
+            BiomeBlockIndexExporter.export(event.getServer());
+            BiomeBlockIndexCacheLoader.load();
+            LOGGER.info("Automatically collected biome index after server startup");
+        } catch (Exception exception) {
+            LOGGER.error("Automatic biome index collection failed", exception);
+        }
     }
 }

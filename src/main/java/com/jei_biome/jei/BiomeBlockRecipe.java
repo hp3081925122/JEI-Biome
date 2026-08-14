@@ -26,6 +26,8 @@ public final class BiomeBlockRecipe {
     private final List<ItemStack> surfaceFeatureStacks;
     private final List<ItemStack> undergroundFeatureStacks;
     private final List<ItemStack> oreStacks;
+    private final List<ItemStack> mobDropStacks;
+    private final List<ItemStack> mobSpawnEggStacks;
     private final Map<String, List<BiomeBlockIndexCache.OreDistributionLine>> oreDistributionLines;
     private final List<ItemStack> lookupStacks;
 
@@ -36,6 +38,21 @@ public final class BiomeBlockRecipe {
         this.surfaceFeatureStacks = toStacks(entry.surfaceFeatureBlocks);
         this.undergroundFeatureStacks = toStacks(entry.undergroundFeatureBlocks);
         this.oreStacks = toStacks(entry.oreBlocks);
+        BiomeMobRecipe mobRecipe = new BiomeMobRecipe(entry);
+        LinkedHashMap<Item, ItemStack> spawnEggs = new LinkedHashMap<>();
+        for (BiomeMobRecipe.MobDisplayEntry mobEntry : mobRecipe.mobEntries()) {
+            if (!mobEntry.stack().isEmpty()) {
+                spawnEggs.putIfAbsent(mobEntry.stack().getItem(), mobEntry.stack().copy());
+            }
+        }
+        LinkedHashMap<Item, ItemStack> mobDrops = new LinkedHashMap<>();
+        for (ItemStack stack : mobRecipe.lookupStacks()) {
+            if (!spawnEggs.containsKey(stack.getItem())) {
+                mobDrops.putIfAbsent(stack.getItem(), stack.copy());
+            }
+        }
+        this.mobSpawnEggStacks = List.copyOf(spawnEggs.values());
+        this.mobDropStacks = List.copyOf(mobDrops.values());
         this.oreDistributionLines = buildOreDistributionLines(entry.oreDistributions);
         LinkedHashMap<Item, ItemStack> lookup = new LinkedHashMap<>();
         for (ItemStack stack : terrainStacks) {
@@ -48,6 +65,12 @@ public final class BiomeBlockRecipe {
             lookup.putIfAbsent(stack.getItem(), stack.copy());
         }
         for (ItemStack stack : oreStacks) {
+            lookup.putIfAbsent(stack.getItem(), stack.copy());
+        }
+        for (ItemStack stack : mobDropStacks) {
+            lookup.putIfAbsent(stack.getItem(), stack.copy());
+        }
+        for (ItemStack stack : mobSpawnEggStacks) {
             lookup.putIfAbsent(stack.getItem(), stack.copy());
         }
         this.lookupStacks = List.copyOf(lookup.values());
@@ -75,6 +98,21 @@ public final class BiomeBlockRecipe {
 
     public List<ItemStack> oreStacks() {
         return copyStacks(oreStacks);
+    }
+
+    public List<ItemStack> mobDropStacks() {
+        return copyStacks(mobDropStacks);
+    }
+
+    public List<ItemStack> mobSpawnEggStacks() {
+        return copyStacks(mobSpawnEggStacks);
+    }
+
+    boolean containsBlockStack(ItemStack target) {
+        return containsItem(terrainStacks, target)
+                || containsItem(surfaceFeatureStacks, target)
+                || containsItem(undergroundFeatureStacks, target)
+                || containsItem(oreStacks, target);
     }
 
     public List<BiomeBlockIndexCache.OreDistributionLine> getOreDistributionLines(ItemStack stack) {
@@ -142,5 +180,17 @@ public final class BiomeBlockRecipe {
             copies.add(stack.copy());
         }
         return List.copyOf(copies);
+    }
+
+    private static boolean containsItem(List<ItemStack> stacks, ItemStack target) {
+        if (target == null || target.isEmpty()) {
+            return false;
+        }
+        for (ItemStack stack : stacks) {
+            if (stack.getItem() == target.getItem()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

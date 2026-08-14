@@ -15,6 +15,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
     private static final int MIN_SCROLL_MARKER_HEIGHT = 14;
 
     private final BiomeBlockRecipe recipe;
+    private final ItemStack focusedBlockStack;
     private final List<IRecipeSlotDrawable> contentSlots;
     private final int height;
     private final ImmutableRect2i area;
@@ -39,8 +41,9 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
     private double dragOriginY = -1.0D;
     private float scrollOffsetY = 0.0F;
 
-    public BiomeBlockScrollWidget(BiomeBlockRecipe recipe, int x, int y, int width, int height, List<IRecipeSlotDrawable> contentSlots) {
+    public BiomeBlockScrollWidget(BiomeBlockRecipe recipe, ItemStack focusedBlockStack, int x, int y, int width, int height, List<IRecipeSlotDrawable> contentSlots) {
         this.recipe = recipe;
+        this.focusedBlockStack = focusedBlockStack.copy();
         this.contentSlots = new ArrayList<>(contentSlots);
         this.height = height;
         this.area = new ImmutableRect2i(x, y, width, height);
@@ -49,8 +52,8 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
         Textures textures = Internal.getTextures();
         this.scrollbarMarker = textures.getScrollbarMarker();
         this.scrollbarBackground = textures.getScrollbarBackground();
-        this.contentHeight = BiomeBlockRecipeCategory.getTotalContentHeight(recipe);
-        this.slotPlacements = BiomeBlockRecipeCategory.getSlotPlacements(recipe);
+        this.contentHeight = BiomeBlockRecipeCategory.getTotalContentHeight(recipe, this.focusedBlockStack);
+        this.slotPlacements = BiomeBlockRecipeCategory.getSlotPlacements(recipe, this.focusedBlockStack);
     }
 
     @Override
@@ -73,7 +76,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
         poseStack.pushMatrix();
         int scrollPixels = getScrollPixels();
         poseStack.translate(0.0F, -scrollPixels);
-        BiomeBlockRecipeCategory.drawScrollableContents(recipe, guiGraphics, 0, 0);
+        BiomeBlockRecipeCategory.drawScrollableContents(recipe, focusedBlockStack, guiGraphics, 0, 0);
         drawSlots(guiGraphics);
         poseStack.popMatrix();
         guiGraphics.disableScissor();
