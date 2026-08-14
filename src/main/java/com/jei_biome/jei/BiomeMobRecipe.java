@@ -26,7 +26,7 @@ public final class BiomeMobRecipe {
 
     public BiomeMobRecipe(BiomeBlockIndexCache.BiomeEntry entry) {
         this.entry = entry;
-        this.id = ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, "mobs_" + entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
+        this.id = new ResourceLocation(Jei_biome.MODID, "mobs_" + entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
         this.mobEntries = buildMobEntries(entry.mobSpawns);
         LinkedHashMap<Item, ItemStack> lookup = new LinkedHashMap<>();
         for (MobDisplayEntry mobEntry : mobEntries) {

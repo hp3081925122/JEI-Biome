@@ -7,21 +7,18 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
+import net.fabricmc.fabric.api.tag.convention.v1.ConventionalBlockTags;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacements;
-import net.minecraft.world.entity.SpawnPlacementType;
-import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.block.Block;
@@ -51,8 +48,6 @@ import net.minecraft.world.level.levelgen.feature.configurations.TreeConfigurati
 import net.minecraft.world.level.levelgen.feature.configurations.VegetationPatchConfiguration;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.neoforged.neoforge.common.Tags;
 
 import java.io.BufferedReader;
 import java.io.Writer;
@@ -71,7 +66,7 @@ import java.util.Set;
 public final class BiomeBlockIndexExporter {
 
     private static final int MAX_FEATURE_DEPTH = 8;
-    public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = BlockTags.create(ResourceLocation.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
+    public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = TagKey.create(Registries.BLOCK, new ResourceLocation("jei_biome", "biome_block_blacklist"));
 
     private BiomeBlockIndexExporter() {
     }
@@ -151,7 +146,7 @@ public final class BiomeBlockIndexExporter {
 
     private static void collectMobSpawns(MinecraftServer server, Biome biome, List<BiomeBlockIndexCache.MobSpawnEntry> target) {
         MobSpawnSettings mobSettings = biome.getMobSettings();
-        for (MobCategory category : mobSettings.getSpawnerTypes()) {
+        for (MobCategory category : MobCategory.values()) {
             for (MobSpawnSettings.SpawnerData spawnerData : mobSettings.getMobs(category).unwrap()) {
                 ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(spawnerData.type);
                 if (entityId == null) {
@@ -163,9 +158,10 @@ public final class BiomeBlockIndexExporter {
                 entry.weight = spawnerData.getWeight().asInt();
                 entry.minCount = spawnerData.minCount;
                 entry.maxCount = spawnerData.maxCount;
-                entry.placementType = summarizeSpawnPlacementType(SpawnPlacements.getPlacementType(spawnerData.type));
+                SpawnPlacements.Type placementType = SpawnPlacements.getPlacementType(spawnerData.type);
+                entry.placementType = placementType.name().toLowerCase(java.util.Locale.ROOT);
                 entry.heightmapType = SpawnPlacements.getHeightmapType(spawnerData.type).getSerializedName();
-                entry.hasPlacement = SpawnPlacements.hasPlacement(spawnerData.type);
+                entry.hasPlacement = placementType != SpawnPlacements.Type.NO_RESTRICTIONS;
                 MobSpawnSettings.MobSpawnCost spawnCost = mobSettings.getMobSpawnCost(spawnerData.type);
                 if (spawnCost != null) {
                     entry.spawnCharge = formatDouble(spawnCost.charge());
@@ -184,12 +180,11 @@ public final class BiomeBlockIndexExporter {
         return Double.toString(value);
     }
 
-    private static List<String> collectEntityDropItems(MinecraftServer server, ResourceKey<LootTable> lootTableId) {
-        if (lootTableId == null || "minecraft:empty".equals(lootTableId.location().toString())) {
+    private static List<String> collectEntityDropItems(MinecraftServer server, ResourceLocation lootTableId) {
+        if (lootTableId == null || "minecraft:empty".equals(lootTableId.toString())) {
             return List.of();
         }
-        ResourceLocation lootLocation = lootTableId.location();
-        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_table/" + lootLocation.getPath() + ".json");
+        ResourceLocation resourceId = new ResourceLocation(lootTableId.getNamespace(), "loot_tables/" + lootTableId.getPath() + ".json");
         return server.getResourceManager().getResource(resourceId)
                 .map(resource -> {
                     LinkedHashSet<String> itemIds = new LinkedHashSet<>();
@@ -201,22 +196,6 @@ public final class BiomeBlockIndexExporter {
                     return sortedList(itemIds);
                 })
                 .orElse(List.of());
-    }
-
-    private static String summarizeSpawnPlacementType(SpawnPlacementType placementType) {
-        if (placementType == SpawnPlacementTypes.ON_GROUND) {
-            return "on_ground";
-        }
-        if (placementType == SpawnPlacementTypes.IN_WATER) {
-            return "in_water";
-        }
-        if (placementType == SpawnPlacementTypes.IN_LAVA) {
-            return "in_lava";
-        }
-        if (placementType == SpawnPlacementTypes.NO_RESTRICTIONS) {
-            return "no_restrictions";
-        }
-        return "custom";
     }
 
     private static void collectItemEntries(JsonElement element, Set<String> itemIds) {
@@ -377,7 +356,7 @@ public final class BiomeBlockIndexExporter {
     }
 
     private static void addOreOrUndergroundBlockState(BlockState state, Set<String> oreBlocks, Set<String> undergroundFeatureBlocks) {
-        if (state != null && state.is(Tags.Blocks.ORES)) {
+        if (state != null && state.is(ConventionalBlockTags.ORES)) {
             addBlockState(state, oreBlocks);
         } else {
             addBlockState(state, undergroundFeatureBlocks);

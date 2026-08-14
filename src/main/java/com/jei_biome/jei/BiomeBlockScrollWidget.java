@@ -9,7 +9,7 @@ import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import mezz.jei.api.gui.widgets.ISlottedRecipeWidget;
 import mezz.jei.common.Internal;
-import mezz.jei.common.gui.elements.ScalableDrawable;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.common.gui.textures.Textures;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
@@ -17,6 +17,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,20 +29,22 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
     private static final int MIN_SCROLL_MARKER_HEIGHT = 14;
 
     private final BiomeBlockRecipe recipe;
+    private final ItemStack focusedBlockStack;
     private final List<IRecipeSlotDrawable> contentSlots;
     private final int height;
     private final ImmutableRect2i area;
     private final ImmutableRect2i contentsArea;
     private final ImmutableRect2i scrollbarArea;
-    private final ScalableDrawable scrollbarMarker;
-    private final ScalableDrawable scrollbarBackground;
+    private final DrawableNineSliceTexture scrollbarMarker;
+    private final DrawableNineSliceTexture scrollbarBackground;
     private final int contentHeight;
     private final List<BiomeBlockRecipeCategory.SlotPlacement> slotPlacements;
     private double dragOriginY = -1.0D;
     private float scrollOffsetY = 0.0F;
 
-    public BiomeBlockScrollWidget(BiomeBlockRecipe recipe, int x, int y, int width, int height, List<IRecipeSlotDrawable> contentSlots) {
+    public BiomeBlockScrollWidget(BiomeBlockRecipe recipe, ItemStack focusedBlockStack, int x, int y, int width, int height, List<IRecipeSlotDrawable> contentSlots) {
         this.recipe = recipe;
+        this.focusedBlockStack = focusedBlockStack.copy();
         this.contentSlots = new ArrayList<>(contentSlots);
         this.height = height;
         this.area = new ImmutableRect2i(x, y, width, height);
@@ -50,8 +53,8 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
         Textures textures = Internal.getTextures();
         this.scrollbarMarker = textures.getScrollbarMarker();
         this.scrollbarBackground = textures.getScrollbarBackground();
-        this.contentHeight = BiomeBlockRecipeCategory.getTotalContentHeight(recipe);
-        this.slotPlacements = BiomeBlockRecipeCategory.getSlotPlacements(recipe);
+        this.contentHeight = BiomeBlockRecipeCategory.getTotalContentHeight(recipe, this.focusedBlockStack);
+        this.slotPlacements = BiomeBlockRecipeCategory.getSlotPlacements(recipe, this.focusedBlockStack);
     }
 
     @Override
@@ -75,7 +78,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
         poseStack.pushPose();
         int scrollPixels = getScrollPixels();
         poseStack.translate(0.0D, -scrollPixels, 0.0D);
-        BiomeBlockRecipeCategory.drawScrollableContents(recipe, guiGraphics, 0, 0);
+        BiomeBlockRecipeCategory.drawScrollableContents(recipe, focusedBlockStack, guiGraphics, 0, 0);
         drawSlots(guiGraphics);
         poseStack.popPose();
         guiGraphics.disableScissor();
@@ -132,7 +135,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
     }
 
     @Override
-    public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollDeltaX, double scrollDeltaY) {
+    public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollDeltaY) {
         if (getHiddenAmount() > 0) {
             float scrollAmount = (float) (scrollDeltaY * 18.0D / Math.max(contentHeight, 1));
             scrollOffsetY = Mth.clamp(scrollOffsetY - scrollAmount, 0.0F, 1.0F);

@@ -45,7 +45,7 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
     @Override
     public ResourceLocation getId() {
         ResourceLocation id = recipe.id();
-        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "/" + id.getPath());
+        return new ResourceLocation(id.getNamespace(), "/" + id.getPath());
     }
 
     @Override

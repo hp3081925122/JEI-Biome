@@ -9,7 +9,7 @@ import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import mezz.jei.api.gui.widgets.ISlottedRecipeWidget;
 import mezz.jei.common.Internal;
-import mezz.jei.common.gui.elements.ScalableDrawable;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.common.gui.textures.Textures;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
@@ -35,8 +35,8 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
     private final ImmutableRect2i area;
     private final ImmutableRect2i contentsArea;
     private final ImmutableRect2i scrollbarArea;
-    private final ScalableDrawable scrollbarMarker;
-    private final ScalableDrawable scrollbarBackground;
+    private final DrawableNineSliceTexture scrollbarMarker;
+    private final DrawableNineSliceTexture scrollbarBackground;
     private final int contentHeight;
     private final List<BiomeMobRecipeCategory.SlotPlacement> slotPlacements;
     private double dragOriginY = -1.0D;
@@ -135,7 +135,7 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
     }
 
     @Override
-    public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollDeltaX, double scrollDeltaY) {
+    public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollDeltaY) {
         if (getHiddenAmount() > 0) {
             float scrollAmount = (float) (scrollDeltaY * 18.0D / Math.max(contentHeight, 1));
             scrollOffsetY = Mth.clamp(scrollOffsetY - scrollAmount, 0.0F, 1.0F);

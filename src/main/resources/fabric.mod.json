@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_full_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": [
+    "${mod_authors}"
+  ],
+  "license": "${mod_license}",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.jei_biome.Jei_biome"
+    ],
+    "client": [
+      "com.jei_biome.client.JeiBiomeClient"
+    ],
+    "emi": [
+      "com.jei_biome.emi.EmiBiomePlugin"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "jei_biome.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=17",
+    "jei": ">=${jei_version}"
+  },
+  "suggests": {
+    "emi": ">=1.1.24"
+  }
+}

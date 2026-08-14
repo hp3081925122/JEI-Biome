@@ -14,11 +14,11 @@ import net.minecraft.world.item.Items;
 public final class EmiBiomePlugin implements EmiPlugin {
 
     public static final EmiRecipeCategory BIOME_BLOCKS = new EmiRecipeCategory(
-            ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, "biome_blocks"),
+            new ResourceLocation(Jei_biome.MODID, "biome_blocks"),
             EmiStack.of(Items.GRASS_BLOCK)
     );
     public static final EmiRecipeCategory BIOME_MOBS = new EmiRecipeCategory(
-            ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, "biome_mobs"),
+            new ResourceLocation(Jei_biome.MODID, "biome_mobs"),
             EmiStack.of(Items.CREEPER_SPAWN_EGG)
     );
 
