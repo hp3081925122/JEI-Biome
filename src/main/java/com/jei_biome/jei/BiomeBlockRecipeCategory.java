@@ -83,10 +83,14 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, BiomeBlockRecipe recipe, IFocusGroup focuses) {
-        addSectionSlots(builder, recipe.terrainStacks());
-        addSectionSlots(builder, recipe.surfaceFeatureStacks());
-        addSectionSlots(builder, recipe.undergroundFeatureStacks());
-        for (ItemStack stack : recipe.oreStacks()) {
+        ItemStack focusedBlockStack = getFocusedBlockStack(recipe, focuses);
+        if (!focusedBlockStack.isEmpty()) {
+            addSectionSlots(builder, List.of(focusedBlockStack));
+        }
+        addSectionSlots(builder, withoutBlockStack(recipe.terrainStacks(), focusedBlockStack));
+        addSectionSlots(builder, withoutBlockStack(recipe.surfaceFeatureStacks(), focusedBlockStack));
+        addSectionSlots(builder, withoutBlockStack(recipe.undergroundFeatureStacks(), focusedBlockStack));
+        for (ItemStack stack : withoutBlockStack(recipe.oreStacks(), focusedBlockStack)) {
             builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
                     .setStandardSlotBackground()
                     .addItemStack(stack)
@@ -103,6 +107,8 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
                         }
                     });
         }
+        addSectionSlots(builder, recipe.mobDropStacks());
+        addSectionSlots(builder, recipe.mobSpawnEggStacks());
         if (!recipe.lookupStacks().isEmpty()) {
             builder.addInvisibleIngredients(RecipeIngredientRole.INPUT).addItemStacks(recipe.lookupStacks());
             builder.addInvisibleIngredients(RecipeIngredientRole.OUTPUT).addItemStacks(recipe.lookupStacks());
@@ -127,39 +133,88 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     @Override
     public void createRecipeExtras(IRecipeExtrasBuilder builder, BiomeBlockRecipe recipe, IFocusGroup focuses) {
         List<IRecipeSlotDrawable> contentSlots = builder.getRecipeSlots().getSlots();
-        BiomeBlockScrollWidget widget = new BiomeBlockScrollWidget(recipe, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, CONTENT_HEIGHT, contentSlots);
+        BiomeBlockScrollWidget widget = new BiomeBlockScrollWidget(recipe, getFocusedBlockStack(recipe, focuses), CONTENT_X, CONTENT_Y, CONTENT_WIDTH, CONTENT_HEIGHT, contentSlots);
         builder.addSlottedWidget(widget, contentSlots);
         builder.addInputHandler(widget);
     }
 
-    static void drawScrollableContents(BiomeBlockRecipe recipe, GuiGraphics guiGraphics, int x, int y) {
+    static void drawScrollableContents(BiomeBlockRecipe recipe, ItemStack focusedBlockStack, GuiGraphics guiGraphics, int x, int y) {
         Font font = Minecraft.getInstance().font;
         int currentY = y + 4;
-        currentY = drawSection(recipe.entry().terrainBlocks.size(), Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks(), guiGraphics, font, x, currentY);
-        currentY = drawSection(recipe.entry().surfaceFeatureBlocks.size(), Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks(), guiGraphics, font, x, currentY);
-        currentY = drawSection(recipe.entry().undergroundFeatureBlocks.size(), Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks(), guiGraphics, font, x, currentY);
-        drawSection(recipe.entry().oreBlocks.size(), Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks(), guiGraphics, font, x, currentY);
+        if (!focusedBlockStack.isEmpty()) {
+            currentY = drawSection(1, Component.translatable("jei_biome.label.queried_block", focusedBlockStack.getHoverName()), List.of(focusedBlockStack), guiGraphics, font, x, currentY);
+        }
+        List<ItemStack> terrainStacks = withoutBlockStack(recipe.terrainStacks(), focusedBlockStack);
+        List<ItemStack> surfaceFeatureStacks = withoutBlockStack(recipe.surfaceFeatureStacks(), focusedBlockStack);
+        List<ItemStack> undergroundFeatureStacks = withoutBlockStack(recipe.undergroundFeatureStacks(), focusedBlockStack);
+        List<ItemStack> oreStacks = withoutBlockStack(recipe.oreStacks(), focusedBlockStack);
+        currentY = drawSection(terrainStacks.size(), Component.translatable("jei_biome.label.terrain_blocks", terrainStacks.size()), terrainStacks, guiGraphics, font, x, currentY);
+        currentY = drawSection(surfaceFeatureStacks.size(), Component.translatable("jei_biome.label.surface_feature_blocks", surfaceFeatureStacks.size()), surfaceFeatureStacks, guiGraphics, font, x, currentY);
+        currentY = drawSection(undergroundFeatureStacks.size(), Component.translatable("jei_biome.label.underground_feature_blocks", undergroundFeatureStacks.size()), undergroundFeatureStacks, guiGraphics, font, x, currentY);
+        currentY = drawSection(oreStacks.size(), Component.translatable("jei_biome.label.ore_blocks", oreStacks.size()), oreStacks, guiGraphics, font, x, currentY);
+        currentY = drawSection(recipe.mobDropStacks().size(), Component.translatable("jei_biome.label.mob_drops", recipe.mobDropStacks().size()), recipe.mobDropStacks(), guiGraphics, font, x, currentY);
+        drawSection(recipe.mobSpawnEggStacks().size(), Component.translatable("jei_biome.label.mob_spawn_eggs", recipe.mobSpawnEggStacks().size()), recipe.mobSpawnEggStacks(), guiGraphics, font, x, currentY);
     }
 
-    static List<SlotPlacement> getSlotPlacements(BiomeBlockRecipe recipe) {
+    static List<SlotPlacement> getSlotPlacements(BiomeBlockRecipe recipe, ItemStack focusedBlockStack) {
         Font font = Minecraft.getInstance().font;
         List<SlotPlacement> placements = new ArrayList<>();
         int currentY = 4;
-        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks(), font, currentY);
-        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks(), font, currentY);
-        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks(), font, currentY);
-        addSlotPlacements(placements, Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks(), font, currentY);
+        if (!focusedBlockStack.isEmpty()) {
+            currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.queried_block", focusedBlockStack.getHoverName()), List.of(focusedBlockStack), font, currentY);
+        }
+        List<ItemStack> terrainStacks = withoutBlockStack(recipe.terrainStacks(), focusedBlockStack);
+        List<ItemStack> surfaceFeatureStacks = withoutBlockStack(recipe.surfaceFeatureStacks(), focusedBlockStack);
+        List<ItemStack> undergroundFeatureStacks = withoutBlockStack(recipe.undergroundFeatureStacks(), focusedBlockStack);
+        List<ItemStack> oreStacks = withoutBlockStack(recipe.oreStacks(), focusedBlockStack);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.terrain_blocks", terrainStacks.size()), terrainStacks, font, currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.surface_feature_blocks", surfaceFeatureStacks.size()), surfaceFeatureStacks, font, currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.underground_feature_blocks", undergroundFeatureStacks.size()), undergroundFeatureStacks, font, currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.ore_blocks", oreStacks.size()), oreStacks, font, currentY);
+        currentY = addSlotPlacements(placements, Component.translatable("jei_biome.label.mob_drops", recipe.mobDropStacks().size()), recipe.mobDropStacks(), font, currentY);
+        addSlotPlacements(placements, Component.translatable("jei_biome.label.mob_spawn_eggs", recipe.mobSpawnEggStacks().size()), recipe.mobSpawnEggStacks(), font, currentY);
         return placements;
     }
 
-    static int getTotalContentHeight(BiomeBlockRecipe recipe) {
+    static int getTotalContentHeight(BiomeBlockRecipe recipe, ItemStack focusedBlockStack) {
         Font font = Minecraft.getInstance().font;
         int height = 4;
-        height += getSectionHeight(font, Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks().size());
-        height += getSectionHeight(font, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks().size());
-        height += getSectionHeight(font, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks().size());
-        height += getSectionHeight(font, Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks().size());
+        if (!focusedBlockStack.isEmpty()) {
+            height += getSectionHeight(font, Component.translatable("jei_biome.label.queried_block", focusedBlockStack.getHoverName()), 1);
+        }
+        List<ItemStack> terrainStacks = withoutBlockStack(recipe.terrainStacks(), focusedBlockStack);
+        List<ItemStack> surfaceFeatureStacks = withoutBlockStack(recipe.surfaceFeatureStacks(), focusedBlockStack);
+        List<ItemStack> undergroundFeatureStacks = withoutBlockStack(recipe.undergroundFeatureStacks(), focusedBlockStack);
+        List<ItemStack> oreStacks = withoutBlockStack(recipe.oreStacks(), focusedBlockStack);
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.terrain_blocks", terrainStacks.size()), terrainStacks.size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.surface_feature_blocks", surfaceFeatureStacks.size()), surfaceFeatureStacks.size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.underground_feature_blocks", undergroundFeatureStacks.size()), undergroundFeatureStacks.size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.ore_blocks", oreStacks.size()), oreStacks.size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.mob_drops", recipe.mobDropStacks().size()), recipe.mobDropStacks().size());
+        height += getSectionHeight(font, Component.translatable("jei_biome.label.mob_spawn_eggs", recipe.mobSpawnEggStacks().size()), recipe.mobSpawnEggStacks().size());
         return height + CONTENT_PADDING_BOTTOM;
+    }
+
+    private static ItemStack getFocusedBlockStack(BiomeBlockRecipe recipe, IFocusGroup focuses) {
+        return focuses.getItemStackFocuses()
+                .map(focus -> focus.getTypedValue().getIngredient())
+                .filter(recipe::containsBlockStack)
+                .findFirst()
+                .map(ItemStack::copy)
+                .orElse(ItemStack.EMPTY);
+    }
+
+    private static List<ItemStack> withoutBlockStack(List<ItemStack> stacks, ItemStack focusedBlockStack) {
+        if (focusedBlockStack == null || focusedBlockStack.isEmpty()) {
+            return stacks;
+        }
+        List<ItemStack> filtered = new ArrayList<>();
+        for (ItemStack stack : stacks) {
+            if (stack.getItem() != focusedBlockStack.getItem()) {
+                filtered.add(stack);
+            }
+        }
+        return List.copyOf(filtered);
     }
 
     private static void addSectionSlots(IRecipeLayoutBuilder builder, List<ItemStack> stacks) {

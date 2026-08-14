@@ -75,11 +75,48 @@ public final class EmiBiomeBlockRecipe implements EmiRecipe {
         widgets.addText(EmiBiomeText.biomeName(recipe.entry().biomeId), 2, 2, EmiBiomeText.TITLE_COLOR, false);
         EmiBiomeScrollWidget.Builder builder = EmiBiomeScrollWidget.builder();
         int y = 4;
-        y = addSection(builder, y, Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks(), false);
-        y = addSection(builder, y, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks(), false);
-        y = addSection(builder, y, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks(), false);
-        addSection(builder, y, Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks(), true);
+        ItemStack focusedBlockStack = focusedBlockStack();
+        if (!focusedBlockStack.isEmpty()) {
+            y = addSection(builder, y, Component.translatable("jei_biome.label.queried_block", focusedBlockStack.getHoverName()), List.of(focusedBlockStack), false);
+        }
+        List<ItemStack> terrainStacks = withoutBlockStack(recipe.terrainStacks(), focusedBlockStack);
+        List<ItemStack> surfaceFeatureStacks = withoutBlockStack(recipe.surfaceFeatureStacks(), focusedBlockStack);
+        List<ItemStack> undergroundFeatureStacks = withoutBlockStack(recipe.undergroundFeatureStacks(), focusedBlockStack);
+        List<ItemStack> oreStacks = withoutBlockStack(recipe.oreStacks(), focusedBlockStack);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.terrain_blocks", terrainStacks.size()), terrainStacks, false);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.surface_feature_blocks", surfaceFeatureStacks.size()), surfaceFeatureStacks, false);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.underground_feature_blocks", undergroundFeatureStacks.size()), undergroundFeatureStacks, false);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.ore_blocks", oreStacks.size()), oreStacks, true);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.mob_drops", recipe.mobDropStacks().size()), recipe.mobDropStacks(), false);
+        addSection(builder, y, Component.translatable("jei_biome.label.mob_spawn_eggs", recipe.mobSpawnEggStacks().size()), recipe.mobSpawnEggStacks(), false);
         widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));
+    }
+
+    private ItemStack focusedBlockStack() {
+        EmiIngredient focused = EmiLookupContext.currentLookup();
+        if (focused == null || focused.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        for (EmiStack stack : focused.getEmiStacks()) {
+            ItemStack itemStack = stack.getItemStack();
+            if (!itemStack.isEmpty() && recipe.containsBlockStack(itemStack)) {
+                return itemStack.copy();
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private List<ItemStack> withoutBlockStack(List<ItemStack> stacks, ItemStack focusedBlockStack) {
+        if (focusedBlockStack == null || focusedBlockStack.isEmpty()) {
+            return stacks;
+        }
+        List<ItemStack> filtered = new ArrayList<>();
+        for (ItemStack stack : stacks) {
+            if (stack.getItem() != focusedBlockStack.getItem()) {
+                filtered.add(stack);
+            }
+        }
+        return List.copyOf(filtered);
     }
 
     private int addSection(EmiBiomeScrollWidget.Builder builder, int y, Component title, List<ItemStack> stacks, boolean oreTooltip) {
