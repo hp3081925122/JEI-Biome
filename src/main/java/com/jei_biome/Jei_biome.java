@@ -1,12 +1,10 @@
 package com.jei_biome;
 
-import com.jei_biome.command.BiomeExportCommands;
 import com.jei_biome.data.BiomeBlockIndexCacheLoader;
+import com.jei_biome.export.BiomeBlockIndexExporter;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.network.chat.Component;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import org.slf4j.Logger;
 
 public final class Jei_biome implements ModInitializer {
@@ -16,10 +14,13 @@ public final class Jei_biome implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> BiomeExportCommands.register(dispatcher));
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            if (BiomeBlockIndexCacheLoader.load().biomes.isEmpty()) {
-                handler.player.sendSystemMessage(Component.translatable("jei_biome.message.missing_biome_index"));
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            try {
+                BiomeBlockIndexExporter.export(server);
+                BiomeBlockIndexCacheLoader.load();
+                LOGGER.info("Automatically collected biome index after server startup");
+            } catch (Exception exception) {
+                LOGGER.error("Automatic biome index collection failed", exception);
             }
         });
     }

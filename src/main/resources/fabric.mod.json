@@ -13,6 +13,9 @@
     "main": [
       "com.jei_biome.Jei_biome"
     ],
+    "client": [
+      "com.jei_biome.client.JeiBiomeClient"
+    ],
     "emi": [
       "com.jei_biome.emi.EmiBiomePlugin"
     ]
