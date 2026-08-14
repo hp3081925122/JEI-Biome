@@ -7,9 +7,11 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.recipe.advanced.ISimpleRecipeManagerPlugin;
+import mezz.jei.api.recipe.IRecipeManager;
 import mezz.jei.api.registration.IAdvancedRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +28,8 @@ import java.util.Set;
 public final class JeiBiomePlugin implements IModPlugin {
 
     private static volatile CachedRecipes cachedRecipes;
+    private static volatile BiomeBlockIndexCache jeiRegisteredCache;
+    private static volatile IJeiRuntime jeiRuntime;
     private final ResourceLocation pluginId = ResourceLocation.fromNamespaceAndPath(Jei_biome.MODID, "plugin");
 
     @Override
@@ -43,8 +47,32 @@ public final class JeiBiomePlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
+        jeiRegisteredCache = BiomeBlockIndexCacheLoader.load();
         registration.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
         registration.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+    }
+
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime runtime) {
+        jeiRuntime = runtime;
+        refreshRuntimeRecipes();
+    }
+
+    public static void refreshRuntimeRecipes() {
+        IJeiRuntime runtime = jeiRuntime;
+        BiomeBlockIndexCache cache = BiomeBlockIndexCacheLoader.load();
+        if (runtime == null || cache.biomes.isEmpty() || cache == jeiRegisteredCache) {
+            return;
+        }
+        synchronized (JeiBiomePlugin.class) {
+            if (cache.biomes.isEmpty() || cache == jeiRegisteredCache) {
+                return;
+            }
+            IRecipeManager recipeManager = runtime.getRecipeManager();
+            recipeManager.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
+            recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+            jeiRegisteredCache = cache;
+        }
     }
 
     @Override
