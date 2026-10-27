@@ -1,6 +1,7 @@
 package com.jei_biome.emi;
 
 import com.jei_biome.Jei_biome;
+import com.jei_biome.config.JeiBiomeConfig;
 import com.jei_biome.jei.JeiBiomePlugin;
 import dev.emi.emi.api.EmiEntrypoint;
 import dev.emi.emi.api.EmiPlugin;
@@ -25,12 +26,17 @@ public final class EmiBiomePlugin implements EmiPlugin {
     @Override
     public void register(EmiRegistry registry) {
         registry.addCategory(BIOME_BLOCKS);
-        registry.addCategory(BIOME_MOBS);
+        // 生物生成关闭时不注册 EMI 的群系生物分类。
+        if (JeiBiomeConfig.showMobSpawns()) {
+            registry.addCategory(BIOME_MOBS);
+        }
         for (var recipe : JeiBiomePlugin.getSharedRecipes()) {
             registry.addRecipe(new EmiBiomeBlockRecipe(recipe));
         }
-        for (var recipe : JeiBiomePlugin.getSharedMobRecipes()) {
-            registry.addRecipe(new EmiBiomeMobRecipe(recipe));
+        if (JeiBiomeConfig.showMobSpawns()) {
+            for (var recipe : JeiBiomePlugin.getSharedMobRecipes()) {
+                registry.addRecipe(new EmiBiomeMobRecipe(recipe));
+            }
         }
     }
 }
