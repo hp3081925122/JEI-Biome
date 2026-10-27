@@ -226,6 +226,10 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     private static int drawSection(int count, Component title, List<ItemStack> stacks, GuiGraphics guiGraphics, Font font, int x, int y) {
+        // 关闭的功能会提供空列表，这里跳过空区域和对应滚动内容。
+        if (count <= 0) {
+            return y;
+        }
         List<FormattedCharSequence> titleLines = font.split(title, TEXT_WIDTH);
         for (int index = 0; index < titleLines.size(); index++) {
             guiGraphics.drawString(font, titleLines.get(index), x + 4, y + index * TITLE_LINE_HEIGHT, 0xFF555555, false);
@@ -257,6 +261,10 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     private static int addSlotPlacements(List<SlotPlacement> placements, Component title, List<ItemStack> stacks, Font font, int currentY) {
+        // 空列表不创建标题、槽位命中区域或额外间距。
+        if (stacks.isEmpty()) {
+            return currentY;
+        }
         int slotStartY = currentY + getTitleHeight(font, title);
         for (int index = 0; index < stacks.size(); index++) {
             int column = index % GRID_COLUMNS;
@@ -267,6 +275,10 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     private static int getSectionHeight(Font font, Component title, int stackCount) {
+        // 空区域不占用滚动内容高度。
+        if (stackCount <= 0) {
+            return 0;
+        }
         int rows = Math.max(1, (stackCount + GRID_COLUMNS - 1) / GRID_COLUMNS);
         return getTitleHeight(font, title) + rows * SLOT_SIZE + SECTION_GAP;
     }

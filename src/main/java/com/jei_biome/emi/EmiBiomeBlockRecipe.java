@@ -120,11 +120,11 @@ public final class EmiBiomeBlockRecipe implements EmiRecipe {
     }
 
     private int addSection(EmiBiomeScrollWidget.Builder builder, int y, Component title, List<ItemStack> stacks, boolean oreTooltip) {
-        int slotY = builder.addWrappedText(title, 4, y, EmiBiomeText.SECTION_COLOR);
+        // 空列表代表对应功能已关闭或没有可展示内容，不占用页面空间。
         if (stacks.isEmpty()) {
-            builder.addWrappedText(Component.translatable("jei_biome.label.empty"), 8, slotY + 4, EmiBiomeText.EMPTY_COLOR);
-            return slotY + EmiBiomeText.SLOT_SIZE + EmiBiomeText.SECTION_GAP;
+            return y;
         }
+        int slotY = builder.addWrappedText(title, 4, y, EmiBiomeText.SECTION_COLOR);
         for (int index = 0; index < stacks.size(); index++) {
             ItemStack stack = stacks.get(index);
             int x = 4 + index % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;

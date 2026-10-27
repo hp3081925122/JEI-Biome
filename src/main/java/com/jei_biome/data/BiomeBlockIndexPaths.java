@@ -12,4 +12,9 @@ public final class BiomeBlockIndexPaths {
     public static Path getCachePath() {
         return FMLPaths.CONFIGDIR.get().resolve("jei_biome").resolve("biome_blocks.json");
     }
+
+    // 返回 JEI Biome 功能开关配置文件路径。
+    public static Path getConfigPath() {
+        return FMLPaths.CONFIGDIR.get().resolve("jei_biome").resolve("features.toml");
+    }
 }
