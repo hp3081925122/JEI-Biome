@@ -7,6 +7,7 @@ plugins {
 
 group = mod_group_id
 version = "${minecraft_version}-neoforge-${mod_version}"
+def localDependencyDir = findProperty('localDependencyDir')
 
 base {
     archivesName = mod_id
@@ -76,12 +77,23 @@ repositories {
 }
 
 dependencies {
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
-    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
-    compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
-    compileOnly "dev.emi:emi-neoforge:${emi_version}"
-    runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    if (localDependencyDir) {
+        compileOnly files("${localDependencyDir}/jei-${minecraft_version}-common-api-${jei_version}.jar")
+        compileOnly files("${localDependencyDir}/jei-${minecraft_version}-common-${jei_version}.jar")
+        compileOnly files("${localDependencyDir}/jei-${minecraft_version}-neoforge-api-${jei_version}.jar")
+        compileOnly files("${localDependencyDir}/jei-${minecraft_version}-neoforge-${jei_version}.jar")
+        runtimeOnly files("${localDependencyDir}/jei-${minecraft_version}-neoforge-${jei_version}.jar")
+        compileOnly files("${localDependencyDir}/emi-neoforge-${emi_version}-api.jar")
+        compileOnly files("${localDependencyDir}/emi-neoforge-${emi_version}.jar")
+        runtimeOnly files("${localDependencyDir}/emi-neoforge-${emi_version}.jar")
+    } else {
+        compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+        compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+        runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+        compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
+        compileOnly "dev.emi:emi-neoforge:${emi_version}"
+        runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {
