@@ -75,19 +75,20 @@ public final class EmiBiomeBlockRecipe implements EmiRecipe {
         widgets.addText(EmiBiomeText.biomeName(recipe.entry().biomeId), 2, 2, EmiBiomeText.TITLE_COLOR, false);
         EmiBiomeScrollWidget.Builder builder = EmiBiomeScrollWidget.builder();
         int y = 4;
-        y = addSection(builder, y, Component.translatable("jei_biome.label.terrain_blocks", recipe.entry().terrainBlocks.size()), recipe.terrainStacks(), false);
-        y = addSection(builder, y, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.entry().surfaceFeatureBlocks.size()), recipe.surfaceFeatureStacks(), false);
-        y = addSection(builder, y, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.entry().undergroundFeatureBlocks.size()), recipe.undergroundFeatureStacks(), false);
-        addSection(builder, y, Component.translatable("jei_biome.label.ore_blocks", recipe.entry().oreBlocks.size()), recipe.oreStacks(), true);
+        // 使用过滤后的数据和数量，保证配置关闭后不会留下空的 EMI 区域。
+        y = addSection(builder, y, Component.translatable("jei_biome.label.terrain_blocks", recipe.terrainStacks().size()), recipe.terrainStacks(), false);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.surface_feature_blocks", recipe.surfaceFeatureStacks().size()), recipe.surfaceFeatureStacks(), false);
+        y = addSection(builder, y, Component.translatable("jei_biome.label.underground_feature_blocks", recipe.undergroundFeatureStacks().size()), recipe.undergroundFeatureStacks(), false);
+        addSection(builder, y, Component.translatable("jei_biome.label.ore_blocks", recipe.oreStacks().size()), recipe.oreStacks(), true);
         widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));
     }
 
     private int addSection(EmiBiomeScrollWidget.Builder builder, int y, Component title, List<ItemStack> stacks, boolean oreTooltip) {
-        int slotY = builder.addWrappedText(title, 4, y, EmiBiomeText.SECTION_COLOR);
+        // 空列表代表对应功能已关闭或没有可展示内容，不占用页面空间。
         if (stacks.isEmpty()) {
-            builder.addWrappedText(Component.translatable("jei_biome.label.empty"), 8, slotY + 4, EmiBiomeText.EMPTY_COLOR);
-            return slotY + EmiBiomeText.SLOT_SIZE + EmiBiomeText.SECTION_GAP;
+            return y;
         }
+        int slotY = builder.addWrappedText(title, 4, y, EmiBiomeText.SECTION_COLOR);
         for (int index = 0; index < stacks.size(); index++) {
             ItemStack stack = stacks.get(index);
             int x = 4 + index % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;

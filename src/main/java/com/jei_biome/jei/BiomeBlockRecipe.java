@@ -1,6 +1,7 @@
 package com.jei_biome.jei;
 
 import com.jei_biome.Jei_biome;
+import com.jei_biome.config.JeiBiomeConfig;
 import com.jei_biome.data.BiomeBlockIndexCache;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -34,26 +35,31 @@ public final class BiomeBlockRecipe {
     public BiomeBlockRecipe(BiomeBlockIndexCache.BiomeEntry entry) {
         this.entry = entry;
         this.id = Identifier.fromNamespaceAndPath(Jei_biome.MODID, entry.biomeId.toLowerCase(Locale.ROOT).replace(':', '_').replace('/', '_'));
-        this.terrainStacks = toStacks(entry.terrainBlocks);
-        this.surfaceFeatureStacks = toStacks(entry.surfaceFeatureBlocks);
-        this.undergroundFeatureStacks = toStacks(entry.undergroundFeatureBlocks);
-        this.oreStacks = toStacks(entry.oreBlocks);
-        BiomeMobRecipe mobRecipe = new BiomeMobRecipe(entry);
+        // 只把已启用的方块信息加入当前群系页面。
+        this.terrainStacks = JeiBiomeConfig.showTerrainBlocks() ? toStacks(entry.terrainBlocks) : List.of();
+        this.surfaceFeatureStacks = JeiBiomeConfig.showSurfaceFeatureBlocks() ? toStacks(entry.surfaceFeatureBlocks) : List.of();
+        this.undergroundFeatureStacks = JeiBiomeConfig.showUndergroundFeatureBlocks() ? toStacks(entry.undergroundFeatureBlocks) : List.of();
+        this.oreStacks = JeiBiomeConfig.showOreBlocks() ? toStacks(entry.oreBlocks) : List.of();
+        BiomeMobRecipe mobRecipe = JeiBiomeConfig.showMobSpawns() ? new BiomeMobRecipe(entry) : null;
         LinkedHashMap<Item, ItemStack> spawnEggs = new LinkedHashMap<>();
-        for (BiomeMobRecipe.MobDisplayEntry mobEntry : mobRecipe.mobEntries()) {
-            if (!mobEntry.stack().isEmpty()) {
-                spawnEggs.putIfAbsent(mobEntry.stack().getItem(), mobEntry.stack().copy());
+        if (mobRecipe != null) {
+            for (BiomeMobRecipe.MobDisplayEntry mobEntry : mobRecipe.mobEntries()) {
+                if (!mobEntry.stack().isEmpty()) {
+                    spawnEggs.putIfAbsent(mobEntry.stack().getItem(), mobEntry.stack().copy());
+                }
             }
         }
         LinkedHashMap<Item, ItemStack> mobDrops = new LinkedHashMap<>();
-        for (ItemStack stack : mobRecipe.lookupStacks()) {
-            if (!spawnEggs.containsKey(stack.getItem())) {
-                mobDrops.putIfAbsent(stack.getItem(), stack.copy());
+        if (mobRecipe != null) {
+            for (ItemStack stack : mobRecipe.lookupStacks()) {
+                if (!spawnEggs.containsKey(stack.getItem())) {
+                    mobDrops.putIfAbsent(stack.getItem(), stack.copy());
+                }
             }
         }
         this.mobSpawnEggStacks = List.copyOf(spawnEggs.values());
         this.mobDropStacks = List.copyOf(mobDrops.values());
-        this.oreDistributionLines = buildOreDistributionLines(entry.oreDistributions);
+        this.oreDistributionLines = JeiBiomeConfig.showOreBlocks() ? buildOreDistributionLines(entry.oreDistributions) : Map.of();
         LinkedHashMap<Item, ItemStack> lookup = new LinkedHashMap<>();
         for (ItemStack stack : terrainStacks) {
             lookup.putIfAbsent(stack.getItem(), stack.copy());

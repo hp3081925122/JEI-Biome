@@ -1,6 +1,7 @@
 package com.jei_biome.jei;
 
 import com.jei_biome.Jei_biome;
+import com.jei_biome.config.JeiBiomeConfig;
 import com.jei_biome.data.BiomeBlockIndexCache;
 import com.jei_biome.data.BiomeBlockIndexCacheLoader;
 import mezz.jei.api.IModPlugin;
@@ -39,17 +40,24 @@ public final class JeiBiomePlugin implements IModPlugin {
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
-        registration.addRecipeCategories(
-                new BiomeBlockRecipeCategory(registration.getJeiHelpers().getGuiHelper()),
-                new BiomeMobRecipeCategory(registration.getJeiHelpers().getGuiHelper())
-        );
+        // 生物生成关闭时不注册群系生物分类，避免 JEI 保留空分类。
+        if (JeiBiomeConfig.showMobSpawns()) {
+            registration.addRecipeCategories(
+                    new BiomeBlockRecipeCategory(registration.getJeiHelpers().getGuiHelper()),
+                    new BiomeMobRecipeCategory(registration.getJeiHelpers().getGuiHelper())
+            );
+        } else {
+            registration.addRecipeCategories(new BiomeBlockRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
+        }
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         jeiRegisteredCache = BiomeBlockIndexCacheLoader.load();
         registration.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
-        registration.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+        if (JeiBiomeConfig.showMobSpawns()) {
+            registration.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+        }
     }
 
     @Override
@@ -70,7 +78,9 @@ public final class JeiBiomePlugin implements IModPlugin {
             }
             IRecipeManager recipeManager = runtime.getRecipeManager();
             recipeManager.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
-            recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+            if (JeiBiomeConfig.showMobSpawns()) {
+                recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+            }
             jeiRegisteredCache = cache;
         }
     }
@@ -78,7 +88,9 @@ public final class JeiBiomePlugin implements IModPlugin {
     @Override
     public void registerAdvanced(IAdvancedRegistration registration) {
         registration.addTypedRecipeManagerPlugin(BiomeBlockRecipeCategory.TYPE, new BiomeBlockRecipeLookupPlugin());
-        registration.addTypedRecipeManagerPlugin(BiomeMobRecipeCategory.TYPE, new BiomeMobRecipeLookupPlugin());
+        if (JeiBiomeConfig.showMobSpawns()) {
+            registration.addTypedRecipeManagerPlugin(BiomeMobRecipeCategory.TYPE, new BiomeMobRecipeLookupPlugin());
+        }
     }
 
     public static List<BiomeBlockRecipe> getSharedRecipes() {
@@ -104,6 +116,9 @@ public final class JeiBiomePlugin implements IModPlugin {
     }
 
     public static List<BiomeMobRecipe> getSharedMobRecipes() {
+        if (!JeiBiomeConfig.showMobSpawns()) {
+            return List.of();
+        }
         BiomeBlockIndexCache cache = BiomeBlockIndexCacheLoader.load();
         CachedMobRecipes snapshot = cachedMobRecipes;
         if (snapshot != null && snapshot.sourceCache == cache) {
