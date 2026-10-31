@@ -35,8 +35,5 @@
     "minecraft": "~${minecraft_version}",
     "java": ">=21",
     "jei": ">=${jei_version}"
-  },
-  "suggests": {
-    "emi": ">=1.1.24"
   }
 }
