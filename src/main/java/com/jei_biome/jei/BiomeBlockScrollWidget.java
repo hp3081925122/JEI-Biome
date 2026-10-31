@@ -30,6 +30,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
     private final BiomeBlockRecipe recipe;
     private final ItemStack focusedBlockStack;
     private final List<IRecipeSlotDrawable> contentSlots;
+    private final int width;
     private final int height;
     private final ImmutableRect2i area;
     private final ImmutableRect2i contentsArea;
@@ -45,6 +46,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
         this.recipe = recipe;
         this.focusedBlockStack = focusedBlockStack.copy();
         this.contentSlots = new ArrayList<>(contentSlots);
+        this.width = width;
         this.height = height;
         this.area = new ImmutableRect2i(x, y, width, height);
         this.contentsArea = new ImmutableRect2i(0, 0, width - BiomeBlockRecipeCategory.getScrollbarWidth(), height);
@@ -68,6 +70,7 @@ public final class BiomeBlockScrollWidget implements ISlottedRecipeWidget, IJeiI
 
     @Override
     public void drawWidget(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
+        BiomeBlockRecipeCategory.drawPanel(guiGraphics, 0, 0, width, height);
         scrollbarBackground.draw(guiGraphics, scrollbarArea);
         scrollbarMarker.draw(guiGraphics, getScrollbarMarkerArea());
 

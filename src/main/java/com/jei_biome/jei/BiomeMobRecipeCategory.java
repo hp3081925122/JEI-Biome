@@ -34,11 +34,14 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     public static final RecipeType<BiomeMobRecipe> TYPE = RecipeType.create(Jei_biome.MODID, "biome_mobs", BiomeMobRecipe.class);
 
     private static final int WIDTH = 188;
-    private static final int HEIGHT = 170;
+    private static final int MAX_HEIGHT = 170;
+    private static final int MIN_HEIGHT = 80;
     private static final int CONTENT_X = 4;
-    private static final int CONTENT_Y = 16;
     private static final int CONTENT_WIDTH = 180;
-    private static final int CONTENT_HEIGHT = 150;
+    private static final int HEADER_Y = 4;
+    private static final int HEADER_GAP = 2;
+    private static final int HEADER_MAX_LINES = 2;
+    private static final int HEADER_TEXT_WIDTH = WIDTH - 8;
     private static final int SCROLLBAR_WIDTH = 16;
     private static final int SLOT_SIZE = 18;
     private static final int GRID_COLUMNS = 8;
@@ -75,7 +78,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
 
     @Override
     public int getHeight() {
-        return HEIGHT;
+        return JeiBiomeLayout.fitHeight(MAX_HEIGHT, MIN_HEIGHT);
     }
 
     @Override
@@ -109,14 +112,14 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     @Override
     public void draw(BiomeMobRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
-        guiGraphics.text(font, getBiomeName(recipe.entry().biomeId), 4, 4, 0xFF2B2B2B, false);
-        drawPanel(guiGraphics, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, CONTENT_HEIGHT);
+        drawHeader(guiGraphics, font, getBiomeName(recipe.entry().biomeId));
     }
 
     @Override
     public void createRecipeExtras(IRecipeExtrasBuilder builder, BiomeMobRecipe recipe, IFocusGroup focuses) {
         List<IRecipeSlotDrawable> contentSlots = builder.getRecipeSlots().getSlots();
-        BiomeMobScrollWidget widget = new BiomeMobScrollWidget(recipe, getFocusedDropStack(recipe, focuses), CONTENT_X, CONTENT_Y, CONTENT_WIDTH, CONTENT_HEIGHT, contentSlots);
+        int contentY = getContentY(getBiomeName(recipe.entry().biomeId));
+        BiomeMobScrollWidget widget = new BiomeMobScrollWidget(recipe, getFocusedDropStack(recipe, focuses), CONTENT_X, contentY, CONTENT_WIDTH, getHeight() - contentY, contentSlots);
         builder.addSlottedWidget(widget, contentSlots);
         builder.addInputHandler(widget);
     }
@@ -370,7 +373,24 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         return value.replace('_', ' ');
     }
 
-    private static void drawPanel(GuiGraphicsExtractor guiGraphics, int x, int y, int width, int height) {
+    private static List<FormattedCharSequence> getHeaderLines(Font font, Component name) {
+        List<FormattedCharSequence> lines = font.split(name, HEADER_TEXT_WIDTH);
+        return lines.size() > HEADER_MAX_LINES ? lines.subList(0, HEADER_MAX_LINES) : lines;
+    }
+
+    private static int getContentY(Component name) {
+        int lines = Math.max(1, getHeaderLines(Minecraft.getInstance().font, name).size());
+        return HEADER_Y + lines * TITLE_LINE_HEIGHT + HEADER_GAP;
+    }
+
+    private static void drawHeader(GuiGraphicsExtractor guiGraphics, Font font, Component name) {
+        List<FormattedCharSequence> lines = getHeaderLines(font, name);
+        for (int index = 0; index < lines.size(); index++) {
+            guiGraphics.text(font, lines.get(index), 4, HEADER_Y + index * TITLE_LINE_HEIGHT, 0xFF2B2B2B, false);
+        }
+    }
+
+    static void drawPanel(GuiGraphicsExtractor guiGraphics, int x, int y, int width, int height) {
         guiGraphics.fill(x, y, x + width, y + height, 0xFFE3E3E3);
         guiGraphics.fill(x, y, x + width, y + 1, 0xFFF8F8F8);
         guiGraphics.fill(x, y, x + 1, y + height, 0xFFF8F8F8);

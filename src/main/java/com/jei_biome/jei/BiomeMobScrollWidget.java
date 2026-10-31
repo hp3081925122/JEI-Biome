@@ -30,6 +30,7 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
     private final BiomeMobRecipe recipe;
     private final ItemStack focusedDropStack;
     private final List<IRecipeSlotDrawable> contentSlots;
+    private final int width;
     private final int height;
     private final ImmutableRect2i area;
     private final ImmutableRect2i contentsArea;
@@ -45,6 +46,7 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
         this.recipe = recipe;
         this.focusedDropStack = focusedDropStack.copy();
         this.contentSlots = new ArrayList<>(contentSlots);
+        this.width = width;
         this.height = height;
         this.area = new ImmutableRect2i(x, y, width, height);
         this.contentsArea = new ImmutableRect2i(0, 0, width - BiomeMobRecipeCategory.getScrollbarWidth(), height);
@@ -68,6 +70,7 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
 
     @Override
     public void drawWidget(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
+        BiomeMobRecipeCategory.drawPanel(guiGraphics, 0, 0, width, height);
         scrollbarBackground.draw(guiGraphics, scrollbarArea);
         scrollbarMarker.draw(guiGraphics, getScrollbarMarkerArea());
 
