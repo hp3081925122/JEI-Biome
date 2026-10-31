@@ -35,9 +35,3 @@ versionRange = "[19.39.0.368,)"
 ordering = "AFTER"
 side = "BOTH"
 
-[[dependencies."${mod_id}"]]
-modId = "emi"
-type = "optional"
-versionRange = "${emi_version_range}"
-ordering = "AFTER"
-side = "CLIENT"
