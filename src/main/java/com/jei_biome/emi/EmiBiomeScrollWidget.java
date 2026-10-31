@@ -10,12 +10,19 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import mezz.jei.common.Internal;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.common.gui.textures.Textures;
+import mezz.jei.common.util.ImmutableRect2i;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class EmiBiomeScrollWidget extends Widget implements EmiScrollableWidget {
+
+    private static final int SCROLLBAR_WIDTH = 14;
+    private static final int MIN_SCROLL_MARKER_HEIGHT = 14;
 
     private final EmiRecipe recipe;
     private final List<Entry> entries;
@@ -24,6 +31,8 @@ public final class EmiBiomeScrollWidget extends Widget implements EmiScrollableW
     private final int width;
     private final int height;
     private final int contentHeight;
+    private final DrawableNineSliceTexture scrollbarMarker;
+    private final DrawableNineSliceTexture scrollbarBackground;
     private int scrollOffset;
     private boolean draggingScrollbar;
     private int scrollbarGrabOffset;
@@ -40,6 +49,9 @@ public final class EmiBiomeScrollWidget extends Widget implements EmiScrollableW
             maxY = Math.max(maxY, entry.y + entry.height);
         }
         this.contentHeight = Math.max(height, maxY + 4);
+        Textures textures = Internal.getTextures();
+        this.scrollbarMarker = textures.getScrollbarMarker();
+        this.scrollbarBackground = textures.getScrollbarBackground();
     }
 
     @Override
@@ -53,7 +65,7 @@ public final class EmiBiomeScrollWidget extends Widget implements EmiScrollableW
         Matrix4f matrix = guiGraphics.pose().last().pose();
         int screenX = Math.round(matrix.m30());
         int screenY = Math.round(matrix.m31());
-        guiGraphics.enableScissor(screenX + x + 1, screenY + y + 1, screenX + x + width - 14, screenY + y + height - 1);
+        guiGraphics.enableScissor(screenX + x + 1, screenY + y + 1, screenX + x + width - EmiBiomeText.SCROLLBAR_EXTRA_WIDTH, screenY + y + height - 1);
         for (Entry entry : entries) {
             int drawY = y + entry.y - scrollOffset;
             if (drawY + entry.height < y || drawY > y + height) {
@@ -138,7 +150,7 @@ public final class EmiBiomeScrollWidget extends Widget implements EmiScrollableW
     }
 
     private Entry hoveredEntry(int mouseX, int mouseY) {
-        if (!getBounds().contains(mouseX, mouseY)) {
+        if (!getBounds().contains(mouseX, mouseY) || mouseX >= x + width - EmiBiomeText.SCROLLBAR_EXTRA_WIDTH) {
             return null;
         }
         int contentX = mouseX - x;
@@ -160,37 +172,32 @@ public final class EmiBiomeScrollWidget extends Widget implements EmiScrollableW
     }
 
     private void drawScrollbar(GuiGraphics guiGraphics) {
-        int barX = x + width - 12;
-        guiGraphics.fill(barX, y + 4, barX + 8, y + height - 4, 0xFFB5B5B5);
-        if (contentHeight <= height) {
-            guiGraphics.fill(barX + 1, y + 5, barX + 7, y + height - 5, 0xFFE0E0E0);
-            return;
-        }
-        guiGraphics.fill(barX + 1, scrollbarThumbY(), barX + 7, scrollbarThumbY() + scrollbarThumbHeight(), 0xFF8A8A8A);
+        scrollbarBackground.draw(guiGraphics, new ImmutableRect2i(x + width - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, height));
+        scrollbarMarker.draw(guiGraphics, new ImmutableRect2i(x + width - SCROLLBAR_WIDTH + 1, scrollbarThumbY(), SCROLLBAR_WIDTH - 2, scrollbarThumbHeight()));
     }
 
     private boolean isOverScrollbar(int mouseX, int mouseY) {
-        int barX = x + width - 12;
-        return mouseX >= barX && mouseX < barX + 8 && mouseY >= y + 4 && mouseY < y + height - 4;
+        int barX = x + width - SCROLLBAR_WIDTH;
+        return mouseX >= barX && mouseX < barX + SCROLLBAR_WIDTH && mouseY >= y && mouseY < y + height;
     }
 
     private int scrollbarTrackHeight() {
-        return height - 10;
+        return height - 2;
     }
 
     private int scrollbarThumbHeight() {
-        return Math.max(16, height * scrollbarTrackHeight() / contentHeight);
+        return Math.min(scrollbarTrackHeight(), Math.max(MIN_SCROLL_MARKER_HEIGHT, height * scrollbarTrackHeight() / contentHeight));
     }
 
     private int scrollbarThumbY() {
-        return y + 5 + scrollOffset * (scrollbarTrackHeight() - scrollbarThumbHeight()) / Math.max(1, contentHeight - height);
+        return y + 1 + scrollOffset * (scrollbarTrackHeight() - scrollbarThumbHeight()) / Math.max(1, contentHeight - height);
     }
 
     private void updateScrollFromMouse(int mouseY) {
-        int trackY = y + 5;
+        int trackY = y + 1;
         int availableTrack = Math.max(1, scrollbarTrackHeight() - scrollbarThumbHeight());
         int thumbTop = clamp(mouseY - scrollbarGrabOffset, trackY, trackY + availableTrack);
-        scrollOffset = clamp((thumbTop - trackY) * (contentHeight - height) / availableTrack, 0, contentHeight - height);
+        scrollOffset = clamp((thumbTop - trackY) * (contentHeight - height) / availableTrack, 0, Math.max(0, contentHeight - height));
     }
 
     private static int clamp(int value, int min, int max) {
