@@ -1,5 +1,6 @@
 package com.jei_biome.emi;
 
+import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.resources.language.I18n;
@@ -13,10 +14,14 @@ import java.util.Locale;
 final class EmiBiomeText {
 
     static final int RECIPE_WIDTH = 172;
-    static final int RECIPE_HEIGHT = 170;
-    static final int CONTENT_Y = 16;
-    static final int CONTENT_HEIGHT = 150;
-    static final int TEXT_WIDTH = 164;
+    static final int MAX_RECIPE_HEIGHT = 170;
+    static final int MIN_RECIPE_HEIGHT = 80;
+    static final int SCROLLBAR_EXTRA_WIDTH = 16;
+    static final int TEXT_WIDTH = RECIPE_WIDTH - SCROLLBAR_EXTRA_WIDTH - 8;
+    static final int TITLE_X = 2;
+    static final int TITLE_Y = 2;
+    static final int TITLE_MAX_LINES = 2;
+    static final int TITLE_GAP = 4;
     static final int SLOT_SIZE = 18;
     static final int GRID_COLUMNS = 8;
     static final int LINE_HEIGHT = 10;
@@ -38,6 +43,23 @@ final class EmiBiomeText {
 
     static int wrappedHeight(Component text) {
         return Math.max(12, split(text).size() * LINE_HEIGHT + 2);
+    }
+
+    static int recipeHeight() {
+        return Math.max(MIN_RECIPE_HEIGHT, Math.min(MAX_RECIPE_HEIGHT, EmiBiomeLayout.maxRecipeHeight()));
+    }
+
+    static List<FormattedCharSequence> titleLines(Component title) {
+        List<FormattedCharSequence> lines = font().split(title, RECIPE_WIDTH - TITLE_X * 2);
+        return lines.size() > TITLE_MAX_LINES ? lines.subList(0, TITLE_MAX_LINES) : lines;
+    }
+
+    static int addTitle(WidgetHolder widgets, Component title) {
+        List<FormattedCharSequence> lines = titleLines(title);
+        for (int index = 0; index < lines.size(); index++) {
+            widgets.addText(lines.get(index), TITLE_X, TITLE_Y + index * LINE_HEIGHT, TITLE_COLOR, false);
+        }
+        return TITLE_Y + Math.max(1, lines.size()) * LINE_HEIGHT + TITLE_GAP;
     }
 
     static Component biomeName(String rawBiomeId) {

@@ -67,12 +67,12 @@ public final class EmiBiomeBlockRecipe implements EmiRecipe {
 
     @Override
     public int getDisplayHeight() {
-        return EmiBiomeText.RECIPE_HEIGHT;
+        return EmiBiomeText.recipeHeight();
     }
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.addText(EmiBiomeText.biomeName(recipe.entry().biomeId), 2, 2, EmiBiomeText.TITLE_COLOR, false);
+        int contentY = EmiBiomeText.addTitle(widgets, EmiBiomeText.biomeName(recipe.entry().biomeId));
         EmiBiomeScrollWidget.Builder builder = EmiBiomeScrollWidget.builder();
         int y = 4;
         ItemStack focusedBlockStack = focusedBlockStack();
@@ -89,7 +89,7 @@ public final class EmiBiomeBlockRecipe implements EmiRecipe {
         y = addSection(builder, y, Component.translatable("jei_biome.label.ore_blocks", oreStacks.size()), oreStacks, true);
         y = addSection(builder, y, Component.translatable("jei_biome.label.mob_drops", recipe.mobDropStacks().size()), recipe.mobDropStacks(), false);
         addSection(builder, y, Component.translatable("jei_biome.label.mob_spawn_eggs", recipe.mobSpawnEggStacks().size()), recipe.mobSpawnEggStacks(), false);
-        widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));
+        widgets.add(builder.build(this, 0, contentY, getDisplayWidth(), widgets.getHeight() - contentY));
     }
 
     private ItemStack focusedBlockStack() {

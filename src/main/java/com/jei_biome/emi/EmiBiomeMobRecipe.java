@@ -70,12 +70,12 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
 
     @Override
     public int getDisplayHeight() {
-        return EmiBiomeText.RECIPE_HEIGHT;
+        return EmiBiomeText.recipeHeight();
     }
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.addText(EmiBiomeText.biomeName(recipe.entry().biomeId), 2, 2, EmiBiomeText.TITLE_COLOR, false);
+        int contentY = EmiBiomeText.addTitle(widgets, EmiBiomeText.biomeName(recipe.entry().biomeId));
         EmiBiomeScrollWidget.Builder builder = EmiBiomeScrollWidget.builder();
         int y = 4;
         ItemStack focusedDropStack = focusedDropStack();
@@ -93,7 +93,7 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
         }
         if (recipe.mobEntries().isEmpty()) {
             builder.addWrappedText(Component.translatable("jei_biome.label.empty"), 8, y + 4, EmiBiomeText.EMPTY_COLOR);
-            widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));
+            widgets.add(builder.build(this, 0, contentY, getDisplayWidth(), widgets.getHeight() - contentY));
             return;
         }
         for (var entry : groupedEntries().entrySet()) {
@@ -112,7 +112,7 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
             int rows = Math.max(1, (entries.size() + EmiBiomeText.GRID_COLUMNS - 1) / EmiBiomeText.GRID_COLUMNS);
             y = slotY + rows * EmiBiomeText.SLOT_SIZE + EmiBiomeText.SECTION_GAP;
         }
-        widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));
+        widgets.add(builder.build(this, 0, contentY, getDisplayWidth(), widgets.getHeight() - contentY));
     }
 
     private LinkedHashMap<String, List<BiomeMobRecipe.MobDisplayEntry>> groupedEntries() {
