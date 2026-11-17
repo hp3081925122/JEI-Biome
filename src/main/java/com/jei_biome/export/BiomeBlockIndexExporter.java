@@ -1,5 +1,6 @@
 package com.jei_biome.export;
 
+import com.jei_biome.Jei_biome;
 import com.jei_biome.data.BiomeBlockIndexCache;
 import com.jei_biome.data.BiomeBlockIndexPaths;
 import com.google.gson.JsonArray;
@@ -69,7 +70,7 @@ import java.util.Set;
 
 public final class BiomeBlockIndexExporter {
 
-    private static final int MAX_FEATURE_DEPTH = 8;
+    private static final int MAX_FEATURE_DEPTH = 16;
     public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
 
     private BiomeBlockIndexExporter() {
@@ -187,19 +188,21 @@ public final class BiomeBlockIndexExporter {
         if (lootTableId == null || "minecraft:empty".equals(lootTableId.location().toString())) {
             return List.of();
         }
-        ResourceLocation lootLocation = lootTableId.location();
+        LinkedHashSet<String> itemIds = new LinkedHashSet<>();
+        collectLootTableItems(server, lootTableId.location(), itemIds, new LinkedHashSet<>());
+        return sortedList(itemIds);
+    }
+
+    private static void collectLootTableItems(MinecraftServer server, ResourceLocation lootLocation, Set<String> itemIds, Set<String> visitedTables) {
+        if (!visitedTables.add(lootLocation.toString())) {
+            return;
+        }
         ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_table/" + lootLocation.getPath() + ".json");
-        return server.getResourceManager().getResource(resourceId)
-                .map(resource -> {
-                    LinkedHashSet<String> itemIds = new LinkedHashSet<>();
-                    try (BufferedReader reader = resource.openAsReader()) {
-                        collectItemEntries(JsonParser.parseReader(reader), itemIds);
-                    } catch (Exception ignored) {
-                        return List.<String>of();
-                    }
-                    return sortedList(itemIds);
-                })
-                .orElse(List.of());
+        server.getResourceManager().getResource(resourceId).ifPresent(resource -> {
+            try (BufferedReader reader = resource.openAsReader()) {
+                collectItemEntries(JsonParser.parseReader(reader), itemIds, server, visitedTables);
+            } catch (Exception ignored) {}
+        });
     }
 
     private static String summarizeSpawnPlacementType(SpawnPlacementType placementType) {
@@ -218,14 +221,13 @@ public final class BiomeBlockIndexExporter {
         return "custom";
     }
 
-    private static void collectItemEntries(JsonElement element, Set<String> itemIds) {
+    private static void collectItemEntries(JsonElement element, Set<String> itemIds, MinecraftServer server, Set<String> visitedTables) {
         if (element == null || element.isJsonNull()) {
             return;
         }
         if (element.isJsonArray()) {
-            JsonArray array = element.getAsJsonArray();
-            for (JsonElement child : array) {
-                collectItemEntries(child, itemIds);
+            for (JsonElement child : element.getAsJsonArray()) {
+                collectItemEntries(child, itemIds, server, visitedTables);
             }
             return;
         }
@@ -233,15 +235,26 @@ public final class BiomeBlockIndexExporter {
             return;
         }
         JsonObject object = element.getAsJsonObject();
-        if (object.has("type") && "minecraft:item".equals(object.get("type").getAsString()) && object.has("name")) {
-            ResourceLocation itemId = ResourceLocation.tryParse(object.get("name").getAsString());
-            Item item = itemId == null ? null : BuiltInRegistries.ITEM.get(itemId);
-            if (item != null) {
-                itemIds.add(itemId.toString());
+        if (object.has("type")) {
+            String type = object.get("type").getAsString();
+            if ("minecraft:item".equals(type) && object.has("name")) {
+                ResourceLocation itemId = ResourceLocation.tryParse(object.get("name").getAsString());
+                Item item = itemId == null ? null : BuiltInRegistries.ITEM.get(itemId);
+                if (item != null) {
+                    itemIds.add(itemId.toString());
+                }
+            } else if ("minecraft:loot_table".equals(type) && object.has("value")) {
+                JsonElement valueElement = object.get("value");
+                if (valueElement.isJsonPrimitive()) {
+                    ResourceLocation refLocation = ResourceLocation.tryParse(valueElement.getAsString());
+                    if (refLocation != null) {
+                        collectLootTableItems(server, refLocation, itemIds, visitedTables);
+                    }
+                }
             }
         }
         for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-            collectItemEntries(entry.getValue(), itemIds);
+            collectItemEntries(entry.getValue(), itemIds, server, visitedTables);
         }
     }
 
@@ -260,7 +273,11 @@ public final class BiomeBlockIndexExporter {
             String placedFeatureId,
             int depth
     ) {
-        if (placedFeature == null || depth > MAX_FEATURE_DEPTH || !visitedPlacedFeatures.add(placedFeature)) {
+        if (placedFeature == null || !visitedPlacedFeatures.add(placedFeature)) {
+            return;
+        }
+        if (depth > MAX_FEATURE_DEPTH) {
+            Jei_biome.LOGGER.warn("Biome block index: placed feature nesting exceeded max depth {} at {}, some blocks may be missing", MAX_FEATURE_DEPTH, placedFeatureId);
             return;
         }
         ConfiguredFeature<?, ?> configuredFeature = placedFeature.feature().value();
@@ -284,7 +301,11 @@ public final class BiomeBlockIndexExporter {
             String placedFeatureId,
             int depth
     ) {
-        if (configuredFeature == null || depth > MAX_FEATURE_DEPTH || !visitedConfiguredFeatures.add(configuredFeature)) {
+        if (configuredFeature == null || !visitedConfiguredFeatures.add(configuredFeature)) {
+            return;
+        }
+        if (depth > MAX_FEATURE_DEPTH) {
+            Jei_biome.LOGGER.warn("Biome block index: configured feature nesting exceeded max depth {} at {}, some blocks may be missing", MAX_FEATURE_DEPTH, placedFeatureId);
             return;
         }
         FeatureConfiguration config = configuredFeature.config();
@@ -439,17 +460,23 @@ public final class BiomeBlockIndexExporter {
             return "common";
         }
         String lowerId = placedFeatureId.toLowerCase(java.util.Locale.ROOT);
-        if (lowerId.contains("_extra")) {
-            return "extra";
+        if (lowerId.contains("_buried")) {
+            return "buried";
         }
         if (lowerId.contains("_large")) {
             return "large";
         }
-        if (lowerId.contains("_buried")) {
-            return "buried";
+        if (lowerId.contains("_extra")) {
+            return "extra";
         }
         if (lowerId.contains("_small")) {
             return "small";
+        }
+        if (lowerId.contains("_rare") || lowerId.contains("_uncommon") || lowerId.contains("_scattered")) {
+            return "rare";
+        }
+        if (lowerId.contains("geode")) {
+            return "geode";
         }
         return "common";
     }

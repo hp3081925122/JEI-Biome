@@ -51,6 +51,8 @@
   "jei_biome.tooltip.ore_source.large": "Large vein",
   "jei_biome.tooltip.ore_source.buried": "Buried vein",
   "jei_biome.tooltip.ore_source.small": "Small vein",
+  "jei_biome.tooltip.ore_source.rare": "Rare vein",
+  "jei_biome.tooltip.ore_source.geode": "Geode crystal",
   "jei_biome.tooltip.ore_size": "Vein size: up to about %s blocks",
   "jei_biome.tooltip.ore_count": "Attempts per chunk: %s",
   "jei_biome.tooltip.ore_rarity": "Frequency: tries once every %s chunks on average",
