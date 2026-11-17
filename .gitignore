@@ -20,3 +20,9 @@ hs_err_pid*
 # Common working directory
 run
 .vscode/
+# Eclipse & Migration docs
+bin/
+.eclipse/
+迁移文档.md
+*迁移文档*.md
+docs/迁移/

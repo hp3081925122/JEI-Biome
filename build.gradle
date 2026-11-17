@@ -18,7 +18,7 @@ plugins {
 apply plugin: 'org.spongepowered.mixin'
 
 group = mod_group_id
-version = "${minecraft_version}-forge-${mod_base_version}"
+version = "${minecraft_version}-forge-${mod_version}"
 def localDependencyDir = findProperty('localDependencyDir')
 
 base {

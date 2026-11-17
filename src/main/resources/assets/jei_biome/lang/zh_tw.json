@@ -48,6 +48,8 @@
   "jei_biome.tooltip.ore_source.large": "大型礦脈",
   "jei_biome.tooltip.ore_source.buried": "埋藏礦脈",
   "jei_biome.tooltip.ore_source.small": "小型礦脈",
+  "jei_biome.tooltip.ore_source.rare": "稀有礦脈",
+  "jei_biome.tooltip.ore_source.geode": "晶洞晶體",
   "jei_biome.tooltip.ore_size": "礦脈大小：最多約 %s 個方塊",
   "jei_biome.tooltip.ore_count": "每區塊嘗試次數：%s",
   "jei_biome.tooltip.ore_rarity": "頻率：平均每 %s 個區塊嘗試一次",
