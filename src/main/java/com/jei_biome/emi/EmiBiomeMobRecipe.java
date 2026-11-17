@@ -82,13 +82,15 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
         List<BiomeMobRecipe.MobDisplayEntry> dropSourceEntries = visibleDropSourceEntries(focusedDropStack);
         if (!dropSourceEntries.isEmpty()) {
             int slotY = builder.addWrappedText(dropSourceTitle(focusedDropStack), 4, y, EmiBiomeText.SECTION_COLOR);
-            for (int index = 0; index < dropSourceEntries.size(); index++) {
-                BiomeMobRecipe.MobDisplayEntry mobEntry = dropSourceEntries.get(index);
-                int x = 4 + index % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
-                int slotRowY = slotY + index / EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
+            // 只对有刷怪蛋的条目编号，避免空项导致槽位坐标偏移
+            int slotIndex = 0;
+            for (BiomeMobRecipe.MobDisplayEntry mobEntry : dropSourceEntries) {
+                int x = 4 + slotIndex % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
+                int slotRowY = slotY + slotIndex / EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
                 builder.addStack(EmiStack.of(mobEntry.stack()), x, slotRowY, mobTooltip(mobEntry));
+                slotIndex++;
             }
-            int rows = Math.max(1, (dropSourceEntries.size() + EmiBiomeText.GRID_COLUMNS - 1) / EmiBiomeText.GRID_COLUMNS);
+            int rows = Math.max(1, (slotIndex + EmiBiomeText.GRID_COLUMNS - 1) / EmiBiomeText.GRID_COLUMNS);
             y = slotY + rows * EmiBiomeText.SLOT_SIZE + EmiBiomeText.SECTION_GAP;
         }
         if (recipe.mobEntries().isEmpty()) {
@@ -100,16 +102,18 @@ public final class EmiBiomeMobRecipe implements EmiRecipe {
             Component title = categoryName(entry.getKey());
             int slotY = builder.addWrappedText(title, 4, y, EmiBiomeText.SECTION_COLOR);
             List<BiomeMobRecipe.MobDisplayEntry> entries = entry.getValue();
-            for (int index = 0; index < entries.size(); index++) {
-                BiomeMobRecipe.MobDisplayEntry mobEntry = entries.get(index);
+            // 用独立计数器，跳过无刷怪蛋条目，确保槽位连续不留空洞
+            int slotIndex = 0;
+            for (BiomeMobRecipe.MobDisplayEntry mobEntry : entries) {
                 if (mobEntry.stack().isEmpty()) {
                     continue;
                 }
-                int x = 4 + index % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
-                int slotRowY = slotY + index / EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
+                int x = 4 + slotIndex % EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
+                int slotRowY = slotY + slotIndex / EmiBiomeText.GRID_COLUMNS * EmiBiomeText.SLOT_SIZE;
                 builder.addStack(EmiStack.of(mobEntry.stack()), x, slotRowY, mobTooltip(mobEntry));
+                slotIndex++;
             }
-            int rows = Math.max(1, (entries.size() + EmiBiomeText.GRID_COLUMNS - 1) / EmiBiomeText.GRID_COLUMNS);
+            int rows = Math.max(1, (slotIndex + EmiBiomeText.GRID_COLUMNS - 1) / EmiBiomeText.GRID_COLUMNS);
             y = slotY + rows * EmiBiomeText.SLOT_SIZE + EmiBiomeText.SECTION_GAP;
         }
         widgets.add(builder.build(this, 0, EmiBiomeText.CONTENT_Y, getDisplayWidth(), EmiBiomeText.CONTENT_HEIGHT));

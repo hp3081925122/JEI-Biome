@@ -77,10 +77,20 @@ public final class JeiBiomePlugin implements IModPlugin {
                 return;
             }
             IRecipeManager recipeManager = runtime.getRecipeManager();
+            if (recipeManager.getRecipeType(BiomeBlockRecipeCategory.TYPE.getUid()).isEmpty()) {
+                Jei_biome.LOGGER.error("JEI recipe category {} is not registered, skipping runtime biome recipe refresh. Check earlier JEI log for 'Caught an error from mod plugin'", BiomeBlockRecipeCategory.TYPE.getUid());
+                jeiRegisteredCache = cache;
+                return;
+            }
             recipeManager.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
             if (JeiBiomeConfig.showMobSpawns()) {
-                recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+                if (recipeManager.getRecipeType(BiomeMobRecipeCategory.TYPE.getUid()).isPresent()) {
+                    recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+                } else {
+                    Jei_biome.LOGGER.error("JEI recipe category {} is not registered, skipping runtime mob recipe refresh", BiomeMobRecipeCategory.TYPE.getUid());
+                }
             }
+            Jei_biome.LOGGER.debug("Refreshed JEI runtime biome recipes, biomes={}", cache.biomes.size());
             jeiRegisteredCache = cache;
         }
     }

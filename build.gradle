@@ -65,6 +65,7 @@ def generateModMetadata = tasks.register('generateModMetadata', ProcessResources
             neo_version            : neo_version,
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
+            jei_version_range      : jei_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
@@ -105,6 +106,7 @@ repositories {
 dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    compileOnly "net.mezzdev.config:mezz_config-${minecraft_version}-config-api:${mezz_config_version}"
     localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 }
 
@@ -115,6 +117,7 @@ tasks.named('processResources', ProcessResources).configure {
             neo_version            : neo_version,
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
+            jei_version_range      : jei_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
