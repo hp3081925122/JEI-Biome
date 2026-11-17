@@ -21,3 +21,9 @@ hs_err_pid*
 run
 .vscode/
 .codex/
+# Eclipse & Migration docs
+bin/
+.eclipse/
+迁移文档.md
+*迁移文档*.md
+docs/迁移/

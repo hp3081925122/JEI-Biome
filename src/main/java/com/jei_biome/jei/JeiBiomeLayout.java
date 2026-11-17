@@ -19,7 +19,7 @@ final class JeiBiomeLayout {
     }
 
     private static int maxRecipeHeight() {
-        IClientConfig config = Internal.getJeiClientConfigs().getClientConfig();
+        IClientConfig config = Internal.getClientConfigs().getClientConfig();
         int screenMargin = config.isCenterSearchBarEnabled() ? CENTER_SEARCH_BAR_SCREEN_MARGIN : SCREEN_MARGIN;
         int guiHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight() - screenMargin;
         guiHeight = Math.min(Math.max(guiHeight, IClientConfig.minRecipeGuiHeight), config.getMaxRecipeGuiHeight());
