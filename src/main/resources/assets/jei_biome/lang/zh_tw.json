@@ -58,5 +58,7 @@
   "jei_biome.tooltip.ore_source.extra": "額外礦脈",
   "jei_biome.tooltip.ore_source.large": "大型礦脈",
   "jei_biome.tooltip.ore_source.small": "小型礦脈",
+  "jei_biome.tooltip.ore_source.rare": "稀有礦脈",
+  "jei_biome.tooltip.ore_source.geode": "晶洞晶體",
   "jei_biome.tooltip.ore_source": "來源：%s"
 }
