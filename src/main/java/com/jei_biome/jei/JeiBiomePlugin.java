@@ -30,6 +30,8 @@ public final class JeiBiomePlugin implements IModPlugin {
 
     private static volatile CachedRecipes cachedRecipes;
     private static volatile BiomeBlockIndexCache jeiRegisteredCache;
+    private static volatile List<BiomeBlockRecipe> jeiRegisteredBlockRecipes = List.of();
+    private static volatile List<BiomeMobRecipe> jeiRegisteredMobRecipes = List.of();
     private static volatile IJeiRuntime jeiRuntime;
     private final Identifier pluginId = Identifier.fromNamespaceAndPath(Jei_biome.MODID, "plugin");
 
@@ -54,9 +56,15 @@ public final class JeiBiomePlugin implements IModPlugin {
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         jeiRegisteredCache = BiomeBlockIndexCacheLoader.load();
-        registration.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
+        List<BiomeBlockRecipe> blockRecipes = getSharedRecipes();
+        jeiRegisteredBlockRecipes = blockRecipes;
+        registration.addRecipes(BiomeBlockRecipeCategory.TYPE, blockRecipes);
         if (JeiBiomeConfig.showMobSpawns()) {
-            registration.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+            List<BiomeMobRecipe> mobRecipes = getSharedMobRecipes();
+            jeiRegisteredMobRecipes = mobRecipes;
+            registration.addRecipes(BiomeMobRecipeCategory.TYPE, mobRecipes);
+        } else {
+            jeiRegisteredMobRecipes = List.of();
         }
     }
 
@@ -77,19 +85,40 @@ public final class JeiBiomePlugin implements IModPlugin {
                 return;
             }
             IRecipeManager recipeManager = runtime.getRecipeManager();
-            recipeManager.addRecipes(BiomeBlockRecipeCategory.TYPE, getSharedRecipes());
-            if (JeiBiomeConfig.showMobSpawns()) {
-                recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, getSharedMobRecipes());
+            if (recipeManager.getRecipeType(BiomeBlockRecipeCategory.TYPE.getUid()).isEmpty()) {
+                Jei_biome.LOGGER.error("JEI recipe category {} is not registered, skipping runtime biome recipe refresh. Check earlier JEI log for 'Caught an error from mod plugin'", BiomeBlockRecipeCategory.TYPE.getUid());
+                jeiRegisteredCache = cache;
+                return;
             }
+            if (!jeiRegisteredBlockRecipes.isEmpty()) {
+                recipeManager.hideRecipes(BiomeBlockRecipeCategory.TYPE, jeiRegisteredBlockRecipes);
+            }
+            List<BiomeBlockRecipe> blockRecipes = getSharedRecipes();
+            jeiRegisteredBlockRecipes = blockRecipes;
+            recipeManager.addRecipes(BiomeBlockRecipeCategory.TYPE, blockRecipes);
+            if (!jeiRegisteredMobRecipes.isEmpty() && recipeManager.getRecipeType(BiomeMobRecipeCategory.TYPE.getUid()).isPresent()) {
+                recipeManager.hideRecipes(BiomeMobRecipeCategory.TYPE, jeiRegisteredMobRecipes);
+                jeiRegisteredMobRecipes = List.of();
+            }
+            if (JeiBiomeConfig.showMobSpawns()) {
+                if (recipeManager.getRecipeType(BiomeMobRecipeCategory.TYPE.getUid()).isPresent()) {
+                    List<BiomeMobRecipe> mobRecipes = getSharedMobRecipes();
+                    jeiRegisteredMobRecipes = mobRecipes;
+                    recipeManager.addRecipes(BiomeMobRecipeCategory.TYPE, mobRecipes);
+                } else {
+                    Jei_biome.LOGGER.error("JEI recipe category {} is not registered, skipping runtime mob recipe refresh", BiomeMobRecipeCategory.TYPE.getUid());
+                }
+            }
+            Jei_biome.LOGGER.debug("Refreshed JEI runtime biome recipes, biomes={}", cache.biomes.size());
             jeiRegisteredCache = cache;
         }
     }
 
     @Override
     public void registerAdvanced(IAdvancedRegistration registration) {
-        registration.addTypedRecipeManagerPlugin(BiomeBlockRecipeCategory.TYPE, new BiomeBlockRecipeLookupPlugin());
+        registration.addSimpleRecipeManagerPlugin(BiomeBlockRecipeCategory.TYPE, new BiomeBlockRecipeLookupPlugin());
         if (JeiBiomeConfig.showMobSpawns()) {
-            registration.addTypedRecipeManagerPlugin(BiomeMobRecipeCategory.TYPE, new BiomeMobRecipeLookupPlugin());
+            registration.addSimpleRecipeManagerPlugin(BiomeMobRecipeCategory.TYPE, new BiomeMobRecipeLookupPlugin());
         }
     }
 

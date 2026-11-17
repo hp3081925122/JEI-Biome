@@ -1,5 +1,6 @@
 package com.jei_biome.export;
 
+import com.jei_biome.Jei_biome;
 import com.jei_biome.data.BiomeBlockIndexCache;
 import com.jei_biome.data.BiomeBlockIndexPaths;
 import com.google.gson.JsonArray;
@@ -34,20 +35,23 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.WeightedPlacedFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.BlockPileConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.BlockStateConfiguration;
+import net.minecraft.world.level.levelgen.feature.configurations.CompositeFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.DeltaFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.DiskConfiguration;
+import net.minecraft.world.level.levelgen.feature.configurations.FallenTreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.GeodeConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.MultifaceGrowthConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
+import net.minecraft.world.level.levelgen.feature.configurations.RandomBooleanFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.RandomFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.ReplaceBlockConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.SimpleBlockConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.SimpleRandomFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.SpringConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.VegetationPatchConfiguration;
+import net.minecraft.world.level.levelgen.feature.configurations.WeightedRandomFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -69,7 +73,7 @@ import java.util.Set;
 
 public final class BiomeBlockIndexExporter {
 
-    private static final int MAX_FEATURE_DEPTH = 8;
+    private static final int MAX_FEATURE_DEPTH = 16;
     public static final TagKey<Block> BIOME_BLOCK_BLACKLIST = BlockTags.create(Identifier.fromNamespaceAndPath("jei_biome", "biome_block_blacklist"));
 
     private BiomeBlockIndexExporter() {
@@ -188,19 +192,23 @@ public final class BiomeBlockIndexExporter {
         if (lootTableId == null || "minecraft:empty".equals(lootTableId.identifier().toString())) {
             return List.of();
         }
-        Identifier lootLocation = lootTableId.identifier();
+        LinkedHashSet<String> itemIds = new LinkedHashSet<>();
+        // 使用访问集合防止循环引用
+        collectLootTableItems(server, lootTableId.identifier(), itemIds, new LinkedHashSet<>());
+        return sortedList(itemIds);
+    }
+
+    // 递归收集战利品表中的物品，支持跨表引用（minecraft:loot_table 类型条目）。
+    private static void collectLootTableItems(MinecraftServer server, Identifier lootLocation, Set<String> itemIds, Set<String> visitedTables) {
+        if (!visitedTables.add(lootLocation.toString())) {
+            return; // 已访问，跳过防止循环
+        }
         Identifier resourceId = Identifier.fromNamespaceAndPath(lootLocation.getNamespace(), "loot_table/" + lootLocation.getPath() + ".json");
-        return server.getResourceManager().getResource(resourceId)
-                .map(resource -> {
-                    LinkedHashSet<String> itemIds = new LinkedHashSet<>();
-                    try (BufferedReader reader = resource.openAsReader()) {
-                        collectItemEntries(JsonParser.parseReader(reader), itemIds);
-                    } catch (Exception ignored) {
-                        return List.<String>of();
-                    }
-                    return sortedList(itemIds);
-                })
-                .orElse(List.of());
+        server.getResourceManager().getResource(resourceId).ifPresent(resource -> {
+            try (BufferedReader reader = resource.openAsReader()) {
+                collectItemEntries(JsonParser.parseReader(reader), itemIds, server, visitedTables);
+            } catch (Exception ignored) {}
+        });
     }
 
     private static String summarizeSpawnPlacementType(SpawnPlacementType placementType) {
@@ -219,14 +227,13 @@ public final class BiomeBlockIndexExporter {
         return "custom";
     }
 
-    private static void collectItemEntries(JsonElement element, Set<String> itemIds) {
+    private static void collectItemEntries(JsonElement element, Set<String> itemIds, MinecraftServer server, Set<String> visitedTables) {
         if (element == null || element.isJsonNull()) {
             return;
         }
         if (element.isJsonArray()) {
-            JsonArray array = element.getAsJsonArray();
-            for (JsonElement child : array) {
-                collectItemEntries(child, itemIds);
+            for (JsonElement child : element.getAsJsonArray()) {
+                collectItemEntries(child, itemIds, server, visitedTables);
             }
             return;
         }
@@ -234,15 +241,29 @@ public final class BiomeBlockIndexExporter {
             return;
         }
         JsonObject object = element.getAsJsonObject();
-        if (object.has("type") && "minecraft:item".equals(object.get("type").getAsString()) && object.has("name")) {
-            Identifier itemId = Identifier.tryParse(object.get("name").getAsString());
-            Item item = itemId == null ? null : BuiltInRegistries.ITEM.getValue(itemId);
-            if (item != null) {
-                itemIds.add(itemId.toString());
+        if (object.has("type")) {
+            String type = object.get("type").getAsString();
+            if ("minecraft:item".equals(type) && object.has("name")) {
+                // 直接物品条目
+                Identifier itemId = Identifier.tryParse(object.get("name").getAsString());
+                Item item = itemId == null ? null : BuiltInRegistries.ITEM.getValue(itemId);
+                if (item != null) {
+                    itemIds.add(itemId.toString());
+                }
+            } else if ("minecraft:loot_table".equals(type) && object.has("value")) {
+                // 嵌套战利品表引用，递归收集其中的物品
+                JsonElement valueElement = object.get("value");
+                if (valueElement.isJsonPrimitive()) {
+                    Identifier refLocation = Identifier.tryParse(valueElement.getAsString());
+                    if (refLocation != null) {
+                        collectLootTableItems(server, refLocation, itemIds, visitedTables);
+                    }
+                }
             }
         }
+        // 继续递归遍历所有子字段（alternatives/sequence/conditions/functions等）
         for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-            collectItemEntries(entry.getValue(), itemIds);
+            collectItemEntries(entry.getValue(), itemIds, server, visitedTables);
         }
     }
 
@@ -261,7 +282,11 @@ public final class BiomeBlockIndexExporter {
             String placedFeatureId,
             int depth
     ) {
-        if (placedFeature == null || depth > MAX_FEATURE_DEPTH || !visitedPlacedFeatures.add(placedFeature)) {
+        if (placedFeature == null || !visitedPlacedFeatures.add(placedFeature)) {
+            return;
+        }
+        if (depth > MAX_FEATURE_DEPTH) {
+            Jei_biome.LOGGER.warn("Biome block index: placed feature nesting exceeded max depth {} at {}, some blocks may be missing", MAX_FEATURE_DEPTH, placedFeatureId);
             return;
         }
         ConfiguredFeature<?, ?> configuredFeature = placedFeature.feature().value();
@@ -285,7 +310,11 @@ public final class BiomeBlockIndexExporter {
             String placedFeatureId,
             int depth
     ) {
-        if (configuredFeature == null || depth > MAX_FEATURE_DEPTH || !visitedConfiguredFeatures.add(configuredFeature)) {
+        if (configuredFeature == null || !visitedConfiguredFeatures.add(configuredFeature)) {
+            return;
+        }
+        if (depth > MAX_FEATURE_DEPTH) {
+            Jei_biome.LOGGER.warn("Biome block index: configured feature nesting exceeded max depth {} at {}, some blocks may be missing", MAX_FEATURE_DEPTH, placedFeatureId);
             return;
         }
         FeatureConfiguration config = configuredFeature.config();
@@ -320,29 +349,38 @@ public final class BiomeBlockIndexExporter {
             addFluidState(springConfiguration.state, resolveFeatureTarget(decorationStep, surfaceFeatureBlocks, undergroundFeatureBlocks));
         } else if (config instanceof MultifaceGrowthConfiguration multifaceGrowthConfiguration) {
             addBlock(multifaceGrowthConfiguration.placeBlock, resolveFeatureTarget(decorationStep, surfaceFeatureBlocks, undergroundFeatureBlocks));
+        } else if (config instanceof FallenTreeConfiguration fallenTreeConfiguration) {
+            addProviderBlock(fallenTreeConfiguration.trunkProvider, surfaceFeatureBlocks);
         } else if (config instanceof GeodeConfiguration geodeConfiguration) {
-            GeodeBlockSettings settings = geodeConfiguration.geodeBlockSettings;
-            addProviderOreOrUndergroundBlock(settings.fillingProvider, oreBlocks, undergroundFeatureBlocks);
-            addProviderOreOrUndergroundBlock(settings.innerLayerProvider, oreBlocks, undergroundFeatureBlocks);
-            addProviderOreOrUndergroundBlock(settings.alternateInnerLayerProvider, oreBlocks, undergroundFeatureBlocks);
-            addProviderOreOrUndergroundBlock(settings.middleLayerProvider, oreBlocks, undergroundFeatureBlocks);
-            addProviderOreOrUndergroundBlock(settings.outerLayerProvider, oreBlocks, undergroundFeatureBlocks);
-            for (BlockState state : settings.innerPlacements) {
+            GeodeBlockSettings settings = geodeConfiguration.geodeBlockSettings();
+            addProviderOreOrUndergroundBlock(settings.fillingProvider(), oreBlocks, undergroundFeatureBlocks);
+            addProviderOreOrUndergroundBlock(settings.innerLayerProvider(), oreBlocks, undergroundFeatureBlocks);
+            addProviderOreOrUndergroundBlock(settings.alternateInnerLayerProvider(), oreBlocks, undergroundFeatureBlocks);
+            addProviderOreOrUndergroundBlock(settings.middleLayerProvider(), oreBlocks, undergroundFeatureBlocks);
+            addProviderOreOrUndergroundBlock(settings.outerLayerProvider(), oreBlocks, undergroundFeatureBlocks);
+            for (BlockState state : settings.innerPlacements()) {
                 addOreOrUndergroundBlockState(state, oreBlocks, undergroundFeatureBlocks);
                 addOreDistributionLine(state, sourcePlacedFeature, placedFeatureId, 0, oreDistributionLines);
             }
         } else if (config instanceof VegetationPatchConfiguration vegetationPatchConfiguration) {
-            addProviderBlock(vegetationPatchConfiguration.groundState, terrainBlocks);
-            collectPlacedFeatureBlocks(vegetationPatchConfiguration.vegetationFeature.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
+            addProviderBlock(vegetationPatchConfiguration.groundState(), terrainBlocks);
+            collectPlacedFeatureBlocks(vegetationPatchConfiguration.vegetationFeature().value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
         } else if (config instanceof RandomFeatureConfiguration randomFeatureConfiguration) {
-            for (WeightedPlacedFeature weightedPlacedFeature : randomFeatureConfiguration.features) {
-                collectPlacedFeatureBlocks(weightedPlacedFeature.feature.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
+            for (WeightedPlacedFeature weightedPlacedFeature : randomFeatureConfiguration.features()) {
+                collectPlacedFeatureBlocks(weightedPlacedFeature.feature().value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
             }
-            collectPlacedFeatureBlocks(randomFeatureConfiguration.defaultFeature.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
-        } else if (config instanceof SimpleRandomFeatureConfiguration simpleRandomFeatureConfiguration) {
-            for (Holder<net.minecraft.world.level.levelgen.placement.PlacedFeature> featureHolder : simpleRandomFeatureConfiguration.features) {
+            collectPlacedFeatureBlocks(randomFeatureConfiguration.defaultFeature().value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
+        } else if (config instanceof WeightedRandomFeatureConfiguration weightedRandomFeatureConfiguration) {
+            for (Weighted<Holder<net.minecraft.world.level.levelgen.placement.PlacedFeature>> weightedFeature : weightedRandomFeatureConfiguration.features().unwrap()) {
+                collectPlacedFeatureBlocks(weightedFeature.value().value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
+            }
+        } else if (config instanceof CompositeFeatureConfiguration compositeFeatureConfiguration) {
+            for (Holder<net.minecraft.world.level.levelgen.placement.PlacedFeature> featureHolder : compositeFeatureConfiguration.features()) {
                 collectPlacedFeatureBlocks(featureHolder.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
             }
+        } else if (config instanceof RandomBooleanFeatureConfiguration randomBooleanFeatureConfiguration) {
+            collectPlacedFeatureBlocks(randomBooleanFeatureConfiguration.featureTrue.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
+            collectPlacedFeatureBlocks(randomBooleanFeatureConfiguration.featureFalse.value(), configuredFeatureRegistry, terrainBlocks, surfaceFeatureBlocks, undergroundFeatureBlocks, oreBlocks, oreDistributionLines, configuredFeatureIds, visitedPlacedFeatures, visitedConfiguredFeatures, decorationStep, placedFeatureId, depth + 1);
         }
     }
 
@@ -478,17 +516,24 @@ public final class BiomeBlockIndexExporter {
             return "common";
         }
         String lowerId = placedFeatureId.toLowerCase(java.util.Locale.ROOT);
-        if (lowerId.contains("_extra")) {
-            return "extra";
+        // 优先匹配更具体的模式，避免 _large_buried 被误判为 large
+        if (lowerId.contains("_buried")) {
+            return "buried";
         }
         if (lowerId.contains("_large")) {
             return "large";
         }
-        if (lowerId.contains("_buried")) {
-            return "buried";
+        if (lowerId.contains("_extra")) {
+            return "extra";
         }
         if (lowerId.contains("_small")) {
             return "small";
+        }
+        if (lowerId.contains("_rare") || lowerId.contains("_uncommon") || lowerId.contains("_scattered")) {
+            return "rare";
+        }
+        if (lowerId.contains("geode")) {
+            return "geode";
         }
         return "common";
     }
@@ -535,10 +580,18 @@ public final class BiomeBlockIndexExporter {
             return object.get("absolute").getAsString();
         }
         if (object.has("above_bottom")) {
-            return "世界底部+" + object.get("above_bottom").getAsString();
+            int offset = object.get("above_bottom").getAsInt();
+            if (offset == 0) {
+                return "世界底部";
+            }
+            return offset > 0 ? "世界底部+" + offset : "世界底部" + offset;
         }
         if (object.has("below_top")) {
-            return "世界顶部-" + object.get("below_top").getAsString();
+            int offset = object.get("below_top").getAsInt();
+            if (offset == 0) {
+                return "世界顶部";
+            }
+            return offset > 0 ? "世界顶部-" + offset : "世界顶部+" + Math.abs(offset);
         }
         return object.toString();
     }

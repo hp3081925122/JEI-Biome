@@ -11,13 +11,13 @@ import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
+import mezz.jei.api.recipe.types.IRecipeType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.ChatFormatting;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
@@ -29,7 +29,7 @@ import java.util.List;
 
 public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBlockRecipe> {
 
-    public static final RecipeType<BiomeBlockRecipe> TYPE = RecipeType.create(Jei_biome.MODID, "biome_blocks", BiomeBlockRecipe.class);
+    public static final IRecipeType<BiomeBlockRecipe> TYPE = IRecipeType.create(Jei_biome.MODID, "biome_blocks", BiomeBlockRecipe.class);
 
     private static final int WIDTH = 188;
     private static final int MAX_HEIGHT = 170;
@@ -55,7 +55,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     @Override
-    public RecipeType<BiomeBlockRecipe> getRecipeType() {
+    public IRecipeType<BiomeBlockRecipe> getRecipeType() {
         return TYPE;
     }
 
@@ -80,7 +80,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
     }
 
     @Override
-    public Identifier getRegistryName(BiomeBlockRecipe recipe) {
+    public Identifier getIdentifier(BiomeBlockRecipe recipe) {
         return recipe.id();
     }
 
@@ -96,7 +96,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         for (ItemStack stack : withoutBlockStack(recipe.oreStacks(), focusedBlockStack)) {
             builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
                     .setStandardSlotBackground()
-                    .addItemStack(stack)
+                    .add(stack)
                     .addRichTooltipCallback((recipeSlotView, tooltip) -> {
                         List<BiomeBlockIndexCache.OreDistributionLine> lines = recipe.getOreDistributionLines(stack);
                         if (!lines.isEmpty()) {
@@ -216,7 +216,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         for (ItemStack stack : stacks) {
             builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
                     .setStandardSlotBackground()
-                    .addItemStack(stack);
+                    .add(stack);
         }
     }
 
@@ -316,7 +316,7 @@ public final class BiomeBlockRecipeCategory implements IRecipeCategory<BiomeBloc
         Identifier biomeId = Identifier.tryParse(rawBiomeId);
         if (biomeId != null) {
             String translationKey = biomeId.toLanguageKey("biome");
-            if (I18n.exists(translationKey)) {
+            if (Language.getInstance().has(translationKey)) {
                 return Component.translatable(translationKey);
             }
         }

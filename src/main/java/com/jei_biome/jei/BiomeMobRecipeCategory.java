@@ -11,14 +11,14 @@ import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
+import mezz.jei.api.recipe.types.IRecipeType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
@@ -31,7 +31,7 @@ import java.util.Locale;
 
 public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRecipe> {
 
-    public static final RecipeType<BiomeMobRecipe> TYPE = RecipeType.create(Jei_biome.MODID, "biome_mobs", BiomeMobRecipe.class);
+    public static final IRecipeType<BiomeMobRecipe> TYPE = IRecipeType.create(Jei_biome.MODID, "biome_mobs", BiomeMobRecipe.class);
 
     private static final int WIDTH = 188;
     private static final int MAX_HEIGHT = 170;
@@ -57,7 +57,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     @Override
-    public RecipeType<BiomeMobRecipe> getRecipeType() {
+    public IRecipeType<BiomeMobRecipe> getRecipeType() {
         return TYPE;
     }
 
@@ -82,7 +82,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     @Override
-    public Identifier getRegistryName(BiomeMobRecipe recipe) {
+    public Identifier getIdentifier(BiomeMobRecipe recipe) {
         return recipe.id();
     }
 
@@ -92,14 +92,14 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         for (BiomeMobRecipe.MobDisplayEntry entry : getVisibleDropSourceEntries(recipe, focusedDropStack)) {
             builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
                     .setStandardSlotBackground()
-                    .addItemStack(entry.stack())
+                    .add(entry.stack())
                     .addRichTooltipCallback((recipeSlotView, tooltip) -> addMobEntryTooltip(tooltip, entry));
         }
         for (BiomeMobRecipe.MobDisplayEntry entry : recipe.mobEntries()) {
             if (!entry.stack().isEmpty()) {
                 builder.addSlot(RecipeIngredientRole.RENDER_ONLY, 0, 0)
                         .setStandardSlotBackground()
-                        .addItemStack(entry.stack())
+                        .add(entry.stack())
                         .addRichTooltipCallback((recipeSlotView, tooltip) -> addMobEntryTooltip(tooltip, entry));
             }
         }
@@ -218,7 +218,7 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
         Identifier biomeId = Identifier.tryParse(rawBiomeId);
         if (biomeId != null) {
             String translationKey = biomeId.toLanguageKey("biome");
-            if (I18n.exists(translationKey)) {
+            if (Language.getInstance().has(translationKey)) {
                 return Component.translatable(translationKey);
             }
         }
@@ -262,10 +262,11 @@ public final class BiomeMobRecipeCategory implements IRecipeCategory<BiomeMobRec
     }
 
     private static Component translateOrLiteral(String translationKey, String fallback) {
-        if (I18n.exists(translationKey)) {
+        Language language = Language.getInstance();
+        if (language.has(translationKey)) {
             return Component.translatable(translationKey);
         }
-        if (fallback != null && I18n.exists(fallback)) {
+        if (fallback != null && language.has(fallback)) {
             return Component.translatable(fallback);
         }
         return Component.literal(cleanFallbackText(fallback));

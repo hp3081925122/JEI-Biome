@@ -33,34 +33,61 @@ public final class JeiBiomeConfig {
             show_mob_spawns=true
             """;
 
-    private static final Settings SETTINGS = load();
+    // 使用时间戳缓存实现热重载：修改配置文件后重新导出群系索引即可生效，无需重启游戏。
+    private static volatile CachedSettings cachedSettings;
 
     private JeiBiomeConfig() {
     }
 
+    private static Settings current() {
+        Path path = BiomeBlockIndexPaths.getConfigPath();
+        long lastModified = 0L;
+        try {
+            if (Files.exists(path)) {
+                lastModified = Files.getLastModifiedTime(path).toMillis();
+            }
+        } catch (Exception ignored) {}
+        CachedSettings snapshot = cachedSettings;
+        if (snapshot != null && snapshot.lastModified == lastModified) {
+            return snapshot.settings;
+        }
+        synchronized (JeiBiomeConfig.class) {
+            snapshot = cachedSettings;
+            if (snapshot == null || snapshot.lastModified != lastModified) {
+                Settings settings = load();
+                cachedSettings = new CachedSettings(settings, lastModified);
+            }
+            return cachedSettings.settings;
+        }
+    }
+
+    public static void ensureLoaded() {
+        current();
+    }
+
     // 返回群系自身/地表候选方块开关状态。
     public static boolean showTerrainBlocks() {
-        return SETTINGS.showTerrainBlocks;
+        return current().showTerrainBlocks;
     }
 
     // 返回地表地物方块开关状态。
     public static boolean showSurfaceFeatureBlocks() {
-        return SETTINGS.showSurfaceFeatureBlocks;
+        return current().showSurfaceFeatureBlocks;
     }
 
     // 返回地下地物方块开关状态。
     public static boolean showUndergroundFeatureBlocks() {
-        return SETTINGS.showUndergroundFeatureBlocks;
+        return current().showUndergroundFeatureBlocks;
     }
 
     // 返回矿石方块开关状态。
     public static boolean showOreBlocks() {
-        return SETTINGS.showOreBlocks;
+        return current().showOreBlocks;
     }
 
     // 返回生物生成分类开关状态。
     public static boolean showMobSpawns() {
-        return SETTINGS.showMobSpawns;
+        return current().showMobSpawns;
     }
 
     // 读取配置文件；首次运行时写入带中英文注释的默认配置。
@@ -118,5 +145,8 @@ public final class JeiBiomeConfig {
         private static Settings defaults() {
             return new Settings(true, true, true, true, true);
         }
+    }
+
+    private record CachedSettings(Settings settings, long lastModified) {
     }
 }

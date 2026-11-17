@@ -19,10 +19,10 @@ final class JeiBiomeLayout {
     }
 
     private static int maxRecipeHeight() {
-        IClientConfig config = Internal.getJeiClientConfigs().getClientConfig();
-        int screenMargin = config.isCenterSearchBarEnabled() ? CENTER_SEARCH_BAR_SCREEN_MARGIN : SCREEN_MARGIN;
+        IClientConfig config = Internal.getClientConfigs().getClientConfig();
+        int screenMargin = config.searchBarPosition().get().isCentered() ? CENTER_SEARCH_BAR_SCREEN_MARGIN : SCREEN_MARGIN;
         int guiHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight() - screenMargin;
-        guiHeight = Math.min(Math.max(guiHeight, IClientConfig.minRecipeGuiHeight), config.getMaxRecipeGuiHeight());
+        guiHeight = Math.min(Math.max(guiHeight, IClientConfig.minRecipeGuiHeight), config.maxRecipeGuiHeight().get());
         return guiHeight - RECIPE_AREA_HEADER - RECIPE_BORDER;
     }
 }

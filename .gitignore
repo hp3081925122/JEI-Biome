@@ -19,5 +19,11 @@ hs_err_pid*
 
 # Common working directory
 run
+runs
 .vscode/
 .codex/
+
+# 迁移过程文档（仅本地保留，不推送远端）
+迁移文档.md
+*迁移文档*.md
+docs/迁移/

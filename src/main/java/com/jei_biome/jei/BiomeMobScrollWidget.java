@@ -1,7 +1,6 @@
 package com.jei_biome.jei;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import mezz.jei.api.gui.inputs.IJeiInputHandler;
 import mezz.jei.api.gui.inputs.IJeiUserInput;
@@ -69,6 +68,11 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
     }
 
     @Override
+    public ScreenRectangle getScreenRectangle() {
+        return getArea();
+    }
+
+    @Override
     public void drawWidget(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         BiomeMobRecipeCategory.drawPanel(guiGraphics, 0, 0, width, height);
         scrollbarBackground.draw(guiGraphics, scrollbarArea);
@@ -80,23 +84,9 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
         int scrollPixels = getScrollPixels();
         poseStack.translate(0.0F, -scrollPixels);
         BiomeMobRecipeCategory.drawScrollableContents(recipe, focusedDropStack, guiGraphics, 0, 0);
-        drawSlots(guiGraphics);
+        drawSlots(guiGraphics, mouseX, mouseY, scrollPixels);
         poseStack.popMatrix();
         guiGraphics.disableScissor();
-    }
-
-    @Override
-    public void getTooltip(ITooltipBuilder tooltip, double mouseX, double mouseY) {
-        if (!contentsArea.contains(mouseX, mouseY)) {
-            return;
-        }
-        double adjustedMouseY = mouseY + getScrollPixels();
-        for (IRecipeSlotDrawable slot : contentSlots) {
-            if (slot.isMouseOver(mouseX, adjustedMouseY)) {
-                slot.getTooltip(tooltip);
-                return;
-            }
-        }
     }
 
     @Override
@@ -156,13 +146,16 @@ public final class BiomeMobScrollWidget implements ISlottedRecipeWidget, IJeiInp
         return true;
     }
 
-    private void drawSlots(GuiGraphicsExtractor guiGraphics) {
+    private void drawSlots(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY, int scrollPixels) {
+        boolean insideViewport = contentsArea.contains(mouseX, mouseY);
+        double adjustedMouseY = mouseY + scrollPixels;
         int slotCount = Math.min(contentSlots.size(), slotPlacements.size());
         for (int index = 0; index < slotCount; index++) {
             IRecipeSlotDrawable slot = contentSlots.get(index);
             BiomeMobRecipeCategory.SlotPlacement placement = slotPlacements.get(index);
             slot.setPosition(placement.x(), placement.y());
-            slot.draw(guiGraphics);
+            boolean hovered = insideViewport && slot.isMouseOver(mouseX, adjustedMouseY);
+            slot.draw(guiGraphics, hovered);
         }
     }
 
